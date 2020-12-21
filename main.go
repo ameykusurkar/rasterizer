@@ -27,14 +27,15 @@ func randomVertex() Vertex {
 }
 
 type Canvas struct {
-	image *image.RGBA
+	image   *image.RGBA
+	polygon []Vertex
 }
 
-func (c *Canvas) PutPixel(x, y float32) {
+func (c *Canvas) PutPixel(x, y float32, color color.Color) {
 	bounds := c.image.Bounds()
 	cX := bounds.Max.X/2 + int(x)
 	cY := bounds.Max.Y/2 - int(y)
-	c.image.Set(cX, cY, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF})
+	c.image.Set(cX, cY, color)
 }
 
 // TODO: Is this the most efficient way?
@@ -42,9 +43,8 @@ func Interpolate(p0, p1 Vertex) []Vertex {
 	dy, dx := p1.y-p0.y, p1.x-p0.x
 	if math.Abs(float64(dx)) > math.Abs(float64(dy)) {
 		return InterpolateHorizontal(p0, p1)
-	} else {
-		return InterpolateVertical(p0, p1)
 	}
+  return InterpolateVertical(p0, p1)
 }
 
 func InterpolateHorizontal(p0, p1 Vertex) []Vertex {
@@ -79,7 +79,7 @@ func InterpolateVertical(p0, p1 Vertex) []Vertex {
 
 func (c *Canvas) DrawLine(p0, p1 Vertex) {
 	for _, vert := range Interpolate(p0, p1) {
-		c.PutPixel(vert.x, vert.y)
+		c.PutPixel(vert.x, vert.y, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF})
 	}
 }
 
@@ -113,20 +113,23 @@ func (c *Canvas) FillTriangle(p0, p1, p2 Vertex) {
 		xLeft, xRight = x02, x012
 	}
 
-  // TODO: Understand why we cannot use DrawLine here
+	// TODO: Understand why we cannot use DrawLine here
 	for i := 0; i < len(x02); i++ {
 		left, right := xLeft[i].x, xRight[i].x
 		for x := left; x <= right; x++ {
-			c.PutPixel(x, xLeft[i].y)
+			c.PutPixel(x, xLeft[i].y, color.RGBA{170, 240, 209, 0xFF})
 		}
 	}
 }
 
 func (c *Canvas) Update() error {
+	if c.polygon == nil {
+		p0, p1, p2 := randomVertex(), randomVertex(), randomVertex()
+		c.polygon = []Vertex{p0, p1, p2}
+	}
 	c.Clear()
-	p0, p1, p2 := randomVertex(), randomVertex(), randomVertex()
-	c.DrawTriangle(p0, p1, p2)
-	c.FillTriangle(p0, p1, p2)
+	c.DrawTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
+	c.FillTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
 	return nil
 }
 
