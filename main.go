@@ -17,21 +17,21 @@ const (
 	screenHeight = 240
 )
 
-type Vertex struct {
+type vertex struct {
 	x, y float32
 }
 
-func randomVertex() Vertex {
+func randomVertex() vertex {
 	x, y := rand.Intn(screenWidth), rand.Intn(screenHeight)
-	return Vertex{float32(x - screenWidth/2), float32(screenHeight/2 - y)}
+	return vertex{float32(x - screenWidth/2), float32(screenHeight/2 - y)}
 }
 
-type Canvas struct {
+type canvas struct {
 	image   *image.RGBA
-	polygon []Vertex
+	polygon []vertex
 }
 
-func (c *Canvas) PutPixel(x, y float32, color color.Color) {
+func (c *canvas) PutPixel(x, y float32, color color.Color) {
 	bounds := c.image.Bounds()
 	cX := bounds.Max.X/2 + int(x)
 	cY := bounds.Max.Y/2 - int(y)
@@ -39,16 +39,16 @@ func (c *Canvas) PutPixel(x, y float32, color color.Color) {
 }
 
 // TODO: Is this the most efficient way?
-func Interpolate(p0, p1 Vertex) []Vertex {
+func interpolate(p0, p1 vertex) []vertex {
 	dy, dx := p1.y-p0.y, p1.x-p0.x
 	if math.Abs(float64(dx)) > math.Abs(float64(dy)) {
-		return InterpolateHorizontal(p0, p1)
+		return interpolateHorizontal(p0, p1)
 	}
-  return InterpolateVertical(p0, p1)
+	return interpolateVertical(p0, p1)
 }
 
-func InterpolateHorizontal(p0, p1 Vertex) []Vertex {
-	verts := make([]Vertex, 0)
+func interpolateHorizontal(p0, p1 vertex) []vertex {
+	verts := make([]vertex, 0)
 	dy, dx := p1.y-p0.y, p1.x-p0.x
 	if p0.x > p1.x {
 		p0, p1 = p1, p0
@@ -56,14 +56,14 @@ func InterpolateHorizontal(p0, p1 Vertex) []Vertex {
 	a := dy / dx
 	y := p0.y
 	for x := p0.x; x <= p1.x; x++ {
-		verts = append(verts, Vertex{x, y})
+		verts = append(verts, vertex{x, y})
 		y += a
 	}
 	return verts
 }
 
-func InterpolateVertical(p0, p1 Vertex) []Vertex {
-	verts := make([]Vertex, 0)
+func interpolateVertical(p0, p1 vertex) []vertex {
+	verts := make([]vertex, 0)
 	dy, dx := p1.y-p0.y, p1.x-p0.x
 	if p0.y > p1.y {
 		p0, p1 = p1, p0
@@ -71,25 +71,25 @@ func InterpolateVertical(p0, p1 Vertex) []Vertex {
 	a := dx / dy
 	x := p0.x
 	for y := p0.y; y <= p1.y; y++ {
-		verts = append(verts, Vertex{x, y})
+		verts = append(verts, vertex{x, y})
 		x += a
 	}
 	return verts
 }
 
-func (c *Canvas) DrawLine(p0, p1 Vertex) {
-	for _, vert := range Interpolate(p0, p1) {
+func (c *canvas) DrawLine(p0, p1 vertex) {
+	for _, vert := range interpolate(p0, p1) {
 		c.PutPixel(vert.x, vert.y, color.RGBA{0xFF, 0xFF, 0xFF, 0xFF})
 	}
 }
 
-func (c *Canvas) DrawTriangle(p0, p1, p2 Vertex) {
+func (c *canvas) DrawTriangle(p0, p1, p2 vertex) {
 	c.DrawLine(p0, p1)
 	c.DrawLine(p1, p2)
 	c.DrawLine(p2, p0)
 }
 
-func (c *Canvas) FillTriangle(p0, p1, p2 Vertex) {
+func (c *canvas) FillTriangle(p0, p1, p2 vertex) {
 	if p1.y < p0.y {
 		p0, p1 = p1, p0
 	}
@@ -100,13 +100,13 @@ func (c *Canvas) FillTriangle(p0, p1, p2 Vertex) {
 		p1, p2 = p2, p1
 	}
 
-	x01 := InterpolateVertical(p0, p1)
+	x01 := interpolateVertical(p0, p1)
 	x01 = x01[:len(x01)-1] // Last value overlaps with x12
-	x12 := InterpolateVertical(p1, p2)
-	x02 := InterpolateVertical(p0, p2)
+	x12 := interpolateVertical(p1, p2)
+	x02 := interpolateVertical(p0, p2)
 	x012 := append(x01, x12...)
 
-	var xLeft, xRight []Vertex
+	var xLeft, xRight []vertex
 	if x01[len(x01)-1].x < x02[len(x01)-1].x {
 		xLeft, xRight = x012, x02
 	} else {
@@ -122,10 +122,10 @@ func (c *Canvas) FillTriangle(p0, p1, p2 Vertex) {
 	}
 }
 
-func (c *Canvas) Update() error {
+func (c *canvas) Update() error {
 	if c.polygon == nil {
 		p0, p1, p2 := randomVertex(), randomVertex(), randomVertex()
-		c.polygon = []Vertex{p0, p1, p2}
+		c.polygon = []vertex{p0, p1, p2}
 	}
 	c.Clear()
 	c.DrawTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
@@ -133,7 +133,7 @@ func (c *Canvas) Update() error {
 	return nil
 }
 
-func (c *Canvas) Clear() error {
+func (c *canvas) Clear() error {
 	bounds := c.image.Bounds()
 	for i := 0; i < bounds.Max.X; i++ {
 		for j := 0; j < bounds.Max.Y; j++ {
@@ -143,12 +143,12 @@ func (c *Canvas) Clear() error {
 	return nil
 }
 
-func (c *Canvas) Draw(screen *ebiten.Image) {
+func (c *canvas) Draw(screen *ebiten.Image) {
 	screen.ReplacePixels(c.image.Pix)
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.CurrentTPS()))
 }
 
-func (c *Canvas) Layout(outsideWidth, outsideHeight int) (int, int) {
+func (c *canvas) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return screenWidth, screenHeight
 }
 
@@ -156,7 +156,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Rasterizer")
 	ebiten.SetMaxTPS(10) // Slow enough to visualise the random lines
-	c := &Canvas{
+	c := &canvas{
 		image: image.NewRGBA(image.Rect(0, 0, screenWidth, screenHeight)),
 	}
 	if err := ebiten.RunGame(c); err != nil {
