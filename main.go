@@ -122,14 +122,63 @@ func (c *canvas) FillTriangle(p0, p1, p2 vertex) {
 	}
 }
 
+// TODO: Refactor
+func (c *canvas) ShadeTriangle(p0, p1, p2 vertex) {
+	if p1.y < p0.y {
+		p0, p1 = p1, p0
+	}
+	if p2.y < p0.y {
+		p0, p2 = p2, p0
+	}
+	if p2.y < p1.y {
+		p1, p2 = p2, p1
+	}
+
+	h0, h1, h2 := float32(0.0), float32(0.5), float32(1.0)
+
+	x01 := interpolateVertical(p0, p1)
+	h01 := interpolateVertical(vertex{x: h0, y: p0.y}, vertex{x: h1, y: p1.y})
+	x01 = x01[:len(x01)-1] // Last value overlaps with x12
+	h01 = h01[:len(h01)-1] // Last value overlaps with x12
+
+	x12 := interpolateVertical(p1, p2)
+	h12 := interpolateVertical(vertex{x: h1, y: p1.y}, vertex{x: h2, y: p2.y})
+
+	x02 := interpolateVertical(p0, p2)
+	h02 := interpolateVertical(vertex{x: h0, y: p0.y}, vertex{x: h2, y: p2.y})
+
+	x012 := append(x01, x12...)
+	h012 := append(h01, h12...)
+
+	var xLefts, xRights []vertex
+	var hLefts, hRights []vertex
+	if x01[len(x01)-1].x < x02[len(x01)-1].x {
+		xLefts, xRights = x012, x02
+		hLefts, hRights = h012, h02
+	} else {
+		xLefts, xRights = x02, x012
+		hLefts, hRights = h02, h012
+	}
+
+	for i := 0; i < len(x02); i++ {
+		xLeft, xRight := xLefts[i].x, xRights[i].x
+		hLeft, hRight := hLefts[i].x, hRights[i].x
+		hh := interpolateHorizontal(vertex{x: xLeft, y: hLeft}, vertex{x: xRight, y: hRight})
+		for x := xLeft; x <= xRight; x++ {
+			hGrad := hh[int(x-xLeft)].y
+			c.PutPixel(x, xLefts[i].y, color.RGBA{uint8(hGrad * 170.0), uint8(hGrad * 240.0), uint8(hGrad * 209.0), 0xFF})
+		}
+	}
+}
+
 func (c *canvas) Update() error {
 	if c.polygon == nil {
 		p0, p1, p2 := randomVertex(), randomVertex(), randomVertex()
 		c.polygon = []vertex{p0, p1, p2}
 	}
 	c.Clear()
-	c.DrawTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
-	c.FillTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
+	// c.DrawTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
+	c.ShadeTriangle(c.polygon[0], c.polygon[1], c.polygon[2])
 	return nil
 }
 
