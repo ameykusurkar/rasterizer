@@ -38,8 +38,10 @@ func paint(canv *canvas.Canvas) {
 	w, h := canv.Dimensions()
 
 	projectedPoints := make([]canvas.Point, 0, len(cube.Vertices))
+  rMat := geom.RotationZ(3.14159/4)
 	for _, v := range cube.Vertices {
-		projected := geom.Project(v, d)
+    rotated := rMat.VecMul(v)
+		projected := geom.Project(rotated, d)
 		point := vertexToPoint(projected, w, h)
 		projectedPoints = append(projectedPoints, point)
 	}
