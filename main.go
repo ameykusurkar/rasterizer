@@ -14,7 +14,7 @@ import (
 
 const (
 	screenWidth  = 320
-	screenHeight = 240
+	screenHeight = 320
 )
 
 type game struct {
@@ -33,65 +33,58 @@ func main() {
 }
 
 func paint(canv *canvas.Canvas) {
-	w, h := canv.Dimensions()
-	fmt.Printf("%d, %d\n", w, h)
-
 	var d float32 = 0.3
+	cube := buildCube()
+	w, h := canv.Dimensions()
 
-	vAf := geom.Vertex{X: -2, Y: 1, Z: 1}
-	vBf := geom.Vertex{X: 0, Y: 1, Z: 1}
-	vCf := geom.Vertex{X: 0, Y: -1, Z: 1}
-	vDf := geom.Vertex{X: -2, Y: -1, Z: 1}
-
-	vAb := geom.Vertex{X: -2, Y: 1, Z: 2}
-	vBb := geom.Vertex{X: 0, Y: 1, Z: 2}
-	vCb := geom.Vertex{X: 0, Y: -1, Z: 2}
-	vDb := geom.Vertex{X: -2, Y: -1, Z: 2}
-
-	pvAf := geom.Project(vAf, d)
-	pvBf := geom.Project(vBf, d)
-	pvCf := geom.Project(vCf, d)
-	pvDf := geom.Project(vDf, d)
-	fmt.Printf("%v, %v, %v, %v\n", pvAf, pvBf, pvCf, pvDf)
-
-	pvAb := geom.Project(vAb, d)
-	pvBb := geom.Project(vBb, d)
-	pvCb := geom.Project(vCb, d)
-	pvDb := geom.Project(vDb, d)
-	fmt.Printf("%v, %v, %v, %v\n", pvAb, pvBb, pvCb, pvDb)
-
-	cpvAf := vertexToPoint(pvAf, w, h)
-	cpvBf := vertexToPoint(pvBf, w, h)
-	cpvCf := vertexToPoint(pvCf, w, h)
-	cpvDf := vertexToPoint(pvDf, w, h)
-	fmt.Printf("%v, %v, %v, %v\n", cpvAf, cpvBf, cpvCf, cpvDf)
-
-	cpvAb := vertexToPoint(pvAb, w, h)
-	cpvBb := vertexToPoint(pvBb, w, h)
-	cpvCb := vertexToPoint(pvCb, w, h)
-	cpvDb := vertexToPoint(pvDb, w, h)
-	fmt.Printf("%v, %v, %v, %v\n", cpvAb, cpvBb, cpvCb, cpvDb)
+	projectedPoints := make([]canvas.Point, 0, len(cube.Vertices))
+	for _, v := range cube.Vertices {
+		projected := geom.Project(v, d)
+		point := vertexToPoint(projected, w, h)
+		projectedPoints = append(projectedPoints, point)
+	}
 
 	canv.Fill(color.RGBA{0, 0, 0, 0xFF})
 
 	red := color.RGBA{255, 0, 0, 255}
-	green := color.RGBA{0, 255, 0, 255}
-	blue := color.RGBA{0, 0, 255, 255}
+	for i := 0; i < len(cube.Indices)/2; i++ {
+		idx0, idx1 := cube.Indices[2*i], cube.Indices[2*i+1]
+		p0, p1 := projectedPoints[idx0], projectedPoints[idx1]
+		canv.DrawLine(p0, p1, red)
+	}
+}
 
-	canv.DrawLine(cpvAf, cpvBf, blue)
-	canv.DrawLine(cpvBf, cpvCf, blue)
-	canv.DrawLine(cpvCf, cpvDf, blue)
-	canv.DrawLine(cpvDf, cpvAf, blue)
+func buildCube() *geom.IndexedLineList {
+	return &geom.IndexedLineList{
+		Vertices: []geom.Vertex{
+			// Front
+			{X: -2, Y: 1, Z: 1},
+			{X: 0, Y: 1, Z: 1},
+			{X: 0, Y: -1, Z: 1},
+			{X: -2, Y: -1, Z: 1},
+			// Back
+			{X: -2, Y: 1, Z: 2},
+			{X: 0, Y: 1, Z: 2},
+			{X: 0, Y: -1, Z: 2},
+			{X: -2, Y: -1, Z: 2},
+		},
+		Indices: []int{
+			0, 1,
+			1, 2,
+			2, 3,
+			3, 0,
 
-	canv.DrawLine(cpvAb, cpvBb, red)
-	canv.DrawLine(cpvBb, cpvCb, red)
-	canv.DrawLine(cpvCb, cpvDb, red)
-	canv.DrawLine(cpvDb, cpvAb, red)
+			4, 5,
+			5, 6,
+			6, 7,
+			7, 4,
 
-	canv.DrawLine(cpvAf, cpvAb, green)
-	canv.DrawLine(cpvBf, cpvBb, green)
-	canv.DrawLine(cpvCf, cpvCb, green)
-	canv.DrawLine(cpvDf, cpvDb, green)
+			0, 4,
+			1, 5,
+			2, 6,
+			3, 7,
+		},
+	}
 }
 
 func vertexToPoint(v geom.Vertex, width int, height int) canvas.Point {

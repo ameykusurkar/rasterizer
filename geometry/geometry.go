@@ -13,3 +13,9 @@ func Project(v Vertex, d float32) Vertex {
 		Z: v.Z,
 	}
 }
+
+// IndexedLineList uses a vertex buffer and an index buffer to represent three-dimensional shapes.
+type IndexedLineList struct {
+	Vertices []Vertex
+	Indices  []int
+}
