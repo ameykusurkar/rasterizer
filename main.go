@@ -56,7 +56,7 @@ func paint(canv *canvas.Canvas) {
 
 func buildCube() *geom.IndexedLineList {
 	return &geom.IndexedLineList{
-		Vertices: []geom.Vertex{
+		Vertices: []geom.Vec3{
 			// Front
 			{X: -2, Y: 1, Z: 1},
 			{X: 0, Y: 1, Z: 1},
@@ -87,7 +87,7 @@ func buildCube() *geom.IndexedLineList {
 	}
 }
 
-func vertexToPoint(v geom.Vertex, width int, height int) canvas.Point {
+func vertexToPoint(v geom.Vec3, width int, height int) canvas.Point {
 	halfWidth, halfHeight := float32(width)/2, float32(height)/2
 	x := (1 + v.X) * halfWidth
 	y := (1 - v.Y) * halfHeight

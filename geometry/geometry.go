@@ -1,13 +1,13 @@
 package geometry
 
-// Vertex represents a point in three-dimensional space.
-type Vertex struct {
+// Vec3 is a three-dimensional geometric object that can be used to represent points in space or vectors.
+type Vec3 struct {
 	X, Y, Z float32
 }
 
 // Project returns v projected onto the plane Z = d.
-func Project(v Vertex, d float32) Vertex {
-	return Vertex{
+func Project(v Vec3, d float32) Vec3 {
+	return Vec3{
 		X: v.X * d / v.Z,
 		Y: v.Y * d / v.Z,
 		Z: v.Z,
@@ -16,6 +16,6 @@ func Project(v Vertex, d float32) Vertex {
 
 // IndexedLineList uses a vertex buffer and an index buffer to represent three-dimensional shapes.
 type IndexedLineList struct {
-	Vertices []Vertex
+	Vertices []Vec3
 	Indices  []int
 }
