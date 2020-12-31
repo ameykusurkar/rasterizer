@@ -57,9 +57,14 @@ func (g *game) paint() {
 		MatMul(geom.RotationZ(g.thetaZ))
 	center := g.cube.Vertices[0].Add(g.cube.Vertices[6]).Scale(0.5)
 
-	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
+	rotatedVertices := make([]geom.Vec3, 0, len(g.cube.Vertices))
 	for _, v := range g.cube.Vertices {
 		rotated := rMat.VecMul(v.Sub(center)).Add(center)
+		rotatedVertices = append(rotatedVertices, rotated)
+	}
+
+	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
+	for _, rotated := range rotatedVertices {
 		projected := geom.Project(rotated, d)
 		point := vertexToPoint(projected, w, h)
 		projectedPoints = append(projectedPoints, point)
@@ -70,6 +75,17 @@ func (g *game) paint() {
 	white := color.RGBA{255, 255, 255, 255}
 	for i := 0; i < len(g.cube.Indices); i += 3 {
 		idx0, idx1, idx2 := g.cube.Indices[i], g.cube.Indices[i+1], g.cube.Indices[i+2]
+
+		v0, v1, v2 := rotatedVertices[idx0], rotatedVertices[idx1], rotatedVertices[idx2]
+		// Assumes that the triangle's vertices are defined in clockwise order
+		normal := v1.Sub(v0).Cross(v2.Sub(v0))
+		if normal.Dot(v0) > 0 {
+			// A positive dot-product indicates that the viewing vector is in the same
+			// direcion as the triangle's normal. This means that we are looking at the
+			// back-face of triangle, which should not be visible.
+			continue
+		}
+
 		p0, p1, p2 := projectedPoints[idx0], projectedPoints[idx1], projectedPoints[idx2]
 
 		g.canv.FillTriangle(p0, p1, p2, colors[(i/3)%len(colors)])
@@ -82,12 +98,20 @@ func (g *game) paint() {
 func buildCube() *geom.IndexedTriangleList {
 	return &geom.IndexedTriangleList{
 		Vertices: []geom.Vec3{
-			// Front
+			/*  Orientation of vertices
+			 *         4--------5
+			 *        /|       /|
+			 *       / |      / |
+			 *      0--------1  |
+			 *      |  7-----|- 6
+			 *      | /      | /
+			 *      |/       |/
+			 *      3--------2
+			 */
 			{X: -1, Y: 1, Z: 2},
 			{X: 1, Y: 1, Z: 2},
 			{X: 1, Y: -1, Z: 2},
 			{X: -1, Y: -1, Z: 2},
-			// Back
 			{X: -1, Y: 1, Z: 4},
 			{X: 1, Y: 1, Z: 4},
 			{X: 1, Y: -1, Z: 4},
@@ -95,15 +119,15 @@ func buildCube() *geom.IndexedTriangleList {
 		},
 		Indices: []int{
 			// Front
-			0, 1, 3,
+			3, 0, 1,
 			3, 1, 2,
 
 			// Back
-			4, 5, 7,
-			7, 5, 6,
+			6, 5, 4,
+			6, 4, 7,
 
 			// Left
-			0, 4, 7,
+			7, 4, 0,
 			7, 0, 3,
 
 			// Right
@@ -115,8 +139,8 @@ func buildCube() *geom.IndexedTriangleList {
 			0, 5, 1,
 
 			// Bottom
-			3, 7, 6,
-			3, 6, 2,
+			7, 3, 2,
+			7, 2, 6,
 		},
 	}
 }

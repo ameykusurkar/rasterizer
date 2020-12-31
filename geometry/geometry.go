@@ -7,35 +7,6 @@ type Vec2 struct {
 	X, Y float32
 }
 
-// Vec3 represents a point or vector in three-dimensional space.
-type Vec3 struct {
-	X, Y, Z float32
-}
-
-func (v Vec3) Scale(k float32) Vec3 {
-	return Vec3{
-		X: k * v.X,
-		Y: k * v.Y,
-		Z: k * v.Z,
-	}
-}
-
-func (v Vec3) Sub(u Vec3) Vec3 {
-	return Vec3{
-		X: v.X - u.X,
-		Y: v.Y - u.Y,
-		Z: v.Z - u.Z,
-	}
-}
-
-func (v Vec3) Add(u Vec3) Vec3 {
-	return Vec3{
-		X: v.X + u.X,
-		Y: v.Y + u.Y,
-		Z: v.Z + u.Z,
-	}
-}
-
 // Project returns v projected onto the plane Z = d.
 func Project(v Vec3, d float32) Vec3 {
 	return Vec3{

@@ -54,7 +54,8 @@ func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
 	}
 }
 
-// FillTriangle fills the triangle formed by the given three points with the specified color.
+// FillTriangle fills the triangle formed by the given three points with the
+// specified color, using the top-left rule.
 func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, clr color.Color) {
 	// Sort points by their Y-coordinate
 	if p1.Y < p0.Y {
