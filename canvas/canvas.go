@@ -76,7 +76,8 @@ func (c *Canvas) FillTriangle(p0, p1, p2 Point, clr color.Color) {
 	x012 := append(x01, x12...)
 
 	var xLeft, xRight []Point
-	if x01[len(x01)-1].X < x02[len(x01)-1].X {
+	// TODO: Clean up this if condition
+	if len(x01) > 0 && x01[len(x01)-1].X < x02[len(x01)-1].X {
 		xLeft, xRight = x012, x02
 	} else {
 		xLeft, xRight = x02, x012
@@ -146,7 +147,6 @@ func (c *Canvas) ShadeTriangle(p0, p1, p2 Point, clr color.RGBA) {
 	}
 }
 
-// TODO: Is this the most efficient way?
 func interpolate(p0, p1 Point) []Point {
 	dy, dx := p1.Y-p0.Y, p1.X-p0.X
 	if math.Abs(float64(dx)) > math.Abs(float64(dy)) {
@@ -156,13 +156,13 @@ func interpolate(p0, p1 Point) []Point {
 }
 
 func interpolateHorizontal(p0, p1 Point) []Point {
-	verts := make([]Point, 0)
-	dy, dx := p1.Y-p0.Y, p1.X-p0.X
 	if p0.X > p1.X {
 		p0, p1 = p1, p0
 	}
+	dy, dx := p1.Y-p0.Y, p1.X-p0.X
 	a := dy / dx
 	y := p0.Y
+	verts := make([]Point, 0)
 	for x := p0.X; x <= p1.X; x++ {
 		verts = append(verts, Point{x, y})
 		y += a
@@ -171,13 +171,13 @@ func interpolateHorizontal(p0, p1 Point) []Point {
 }
 
 func interpolateVertical(p0, p1 Point) []Point {
-	verts := make([]Point, 0)
-	dy, dx := p1.Y-p0.Y, p1.X-p0.X
 	if p0.Y > p1.Y {
 		p0, p1 = p1, p0
 	}
+	dy, dx := p1.Y-p0.Y, p1.X-p0.X
 	a := dx / dy
 	x := p0.X
+	verts := make([]Point, 0)
 	for y := p0.Y; y <= p1.Y; y++ {
 		verts = append(verts, Point{x, y})
 		x += a

@@ -22,6 +22,12 @@ type IndexedLineList struct {
 	Indices  []int
 }
 
+// IndexedTriangleList represents shapes using triangles.
+type IndexedTriangleList struct {
+	Vertices []Vec3
+	Indices  []int
+}
+
 // Mat3 is a 3x3 matrix.
 type Mat3 [3][3]float32
 
