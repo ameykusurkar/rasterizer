@@ -2,7 +2,12 @@ package geometry
 
 import "math"
 
-// Vec3 is a three-dimensional geometric object that can be used to represent points in space or vectors.
+// Vec2 represents a point or vector in two-dimensional space.
+type Vec2 struct {
+	X, Y float32
+}
+
+// Vec3 represents a point or vector in three-dimensional space.
 type Vec3 struct {
 	X, Y, Z float32
 }

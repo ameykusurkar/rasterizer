@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	screenWidth  = 320
-	screenHeight = 320
+	screenWidth  = 400
+	screenHeight = 400
 )
 
 type game struct {
@@ -43,7 +43,7 @@ func (g *game) paint() {
 	var d float32 = 1
 	w, h := g.canv.Dimensions()
 
-	projectedPoints := make([]canvas.Point, 0, len(g.cube.Vertices))
+	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
 	rMat := geom.RotationX(g.thetaX).
 		MatMul(geom.RotationY(g.thetaY)).
 		MatMul(geom.RotationZ(g.thetaZ))
@@ -57,11 +57,14 @@ func (g *game) paint() {
 	g.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
 
 	red := color.RGBA{255, 0, 0, 255}
-	blue := color.RGBA{0, 0, 255, 255}
-
 	for i := 0; i < len(g.cube.Indices); i += 3 {
 		idx0, idx1, idx2 := g.cube.Indices[i], g.cube.Indices[i+1], g.cube.Indices[i+2]
 		p0, p1, p2 := projectedPoints[idx0], projectedPoints[idx1], projectedPoints[idx2]
+
+		blue := color.RGBA{
+			0, 0, 255 - uint8(255*float32(i)/float32(len(g.cube.Indices))), 255,
+		}
+
 		g.canv.FillTriangle(p0, p1, p2, blue)
 		g.canv.DrawLine(p0, p1, red)
 		g.canv.DrawLine(p1, p2, red)
@@ -111,11 +114,11 @@ func buildCube() *geom.IndexedTriangleList {
 	}
 }
 
-func vertexToPoint(v geom.Vec3, width int, height int) canvas.Point {
+func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec2 {
 	halfWidth, halfHeight := float32(width)/2, float32(height)/2
 	x := (1 + v.X) * halfWidth
 	y := (1 - v.Y) * halfHeight
-	return canvas.Point{X: float32(int(x)), Y: float32(int(y))}
+	return geom.Vec2{X: float32(int(x)), Y: float32(int(y))}
 }
 
 func (g *game) Update() error {
