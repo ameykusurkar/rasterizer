@@ -13,7 +13,7 @@ type Canvas struct {
 	image *image.RGBA
 }
 
-// NewCanvas returns a new Canvas with dimensions (width, height)
+// NewCanvas returns a new Canvas with dimensions (width, height).
 func NewCanvas(width, height int) *Canvas {
 	return &Canvas{
 		image: image.NewRGBA(image.Rect(0, 0, width, height)),
@@ -148,8 +148,8 @@ func roundHalfDown(x float32) float32 {
 }
 
 // ShadeTriangle shades the triangle formed by the given three points with the specified color, with a gradient.
+// TODO: This uses an old algorithm and needs to be updated.
 func (c *Canvas) ShadeTriangle(p0, p1, p2 geom.Vec2, clr color.RGBA) {
-	// TODO: Refactor
 	if p1.Y < p0.Y {
 		p0, p1 = p1, p0
 	}
