@@ -17,6 +17,15 @@ const (
 	screenHeight = 400
 )
 
+var colors = []color.RGBA{
+	{255, 0, 0, 255},
+	{0, 255, 0, 255},
+	{0, 0, 255, 255},
+	{0, 255, 255, 255},
+	{255, 255, 0, 255},
+	{255, 0, 255, 255},
+}
+
 type game struct {
 	canv   canvas.Canvas
 	cube   geom.IndexedTriangleList
@@ -43,12 +52,14 @@ func (g *game) paint() {
 	var d float32 = 1
 	w, h := g.canv.Dimensions()
 
-	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
 	rMat := geom.RotationX(g.thetaX).
 		MatMul(geom.RotationY(g.thetaY)).
 		MatMul(geom.RotationZ(g.thetaZ))
+	center := g.cube.Vertices[0].Add(g.cube.Vertices[6]).Scale(0.5)
+
+	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
 	for _, v := range g.cube.Vertices {
-		rotated := rMat.VecMul(v)
+		rotated := rMat.VecMul(v.Sub(center)).Add(center)
 		projected := geom.Project(rotated, d)
 		point := vertexToPoint(projected, w, h)
 		projectedPoints = append(projectedPoints, point)
@@ -56,19 +67,15 @@ func (g *game) paint() {
 
 	g.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
 
-	red := color.RGBA{255, 0, 0, 255}
+	white := color.RGBA{255, 255, 255, 255}
 	for i := 0; i < len(g.cube.Indices); i += 3 {
 		idx0, idx1, idx2 := g.cube.Indices[i], g.cube.Indices[i+1], g.cube.Indices[i+2]
 		p0, p1, p2 := projectedPoints[idx0], projectedPoints[idx1], projectedPoints[idx2]
 
-		blue := color.RGBA{
-			0, 0, 255 - uint8(255*float32(i)/float32(len(g.cube.Indices))), 255,
-		}
-
-		g.canv.FillTriangle(p0, p1, p2, blue)
-		g.canv.DrawLine(p0, p1, red)
-		g.canv.DrawLine(p1, p2, red)
-		g.canv.DrawLine(p2, p0, red)
+		g.canv.FillTriangle(p0, p1, p2, colors[(i/3)%len(colors)])
+		g.canv.DrawLine(p0, p1, white)
+		g.canv.DrawLine(p1, p2, white)
+		g.canv.DrawLine(p2, p0, white)
 	}
 }
 
@@ -81,10 +88,10 @@ func buildCube() *geom.IndexedTriangleList {
 			{X: 1, Y: -1, Z: 2},
 			{X: -1, Y: -1, Z: 2},
 			// Back
-			{X: -1, Y: 1, Z: 3},
-			{X: 1, Y: 1, Z: 3},
-			{X: 1, Y: -1, Z: 3},
-			{X: -1, Y: -1, Z: 3},
+			{X: -1, Y: 1, Z: 4},
+			{X: 1, Y: 1, Z: 4},
+			{X: 1, Y: -1, Z: 4},
+			{X: -1, Y: -1, Z: 4},
 		},
 		Indices: []int{
 			// Front
