@@ -6,27 +6,41 @@ import (
 	geom "rasterizer/geometry"
 )
 
-// Draw renders the given triangles onto the canvas.
-func Draw(canv *canvas.Canvas, triangleList *geom.IndexedTriangleList) {
-	vertices := transformVertices(triangleList.Vertices)
+// Pipeline encapsulates the process of rendering a 3D scene to the screen.
+type Pipeline struct {
+	canv           canvas.Canvas
+	rotation       geom.Mat3
+	rotationCenter geom.Vec3
+}
+
+// Draw renders the given triangles onto the screen.
+func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList) {
+	vertices := p.transformVertices(triangleList.Vertices)
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
-	width, height := canv.Dimensions()
-	clr := color.RGBA{255, 0, 0, 255}
-
-	for _, tri3D := range triangles3D {
+	white := color.RGBA{255, 255, 255, 255}
+	for i, tri3D := range triangles3D {
 		tri2D := [3]geom.Vec2{
-			transformPerspective(tri3D[0], width, height),
-			transformPerspective(tri3D[1], width, height),
-			transformPerspective(tri3D[2], width, height),
+			p.transformPerspective(tri3D[0]),
+			p.transformPerspective(tri3D[1]),
+			p.transformPerspective(tri3D[2]),
 		}
-		canv.FillTriangle(tri2D[0], tri2D[1], tri2D[2], clr)
+
+		p.canv.FillTriangle(tri2D[0], tri2D[1], tri2D[2], colors[i])
+		p.canv.DrawLine(tri2D[0], tri2D[1], white)
+		p.canv.DrawLine(tri2D[1], tri2D[2], white)
+		p.canv.DrawLine(tri2D[2], tri2D[0], white)
 	}
 }
 
 // Apply any rotation or translation to the vertices if necessary.
-func transformVertices(vertices []geom.Vec3) []geom.Vec3 {
-	return vertices
+func (p *Pipeline) transformVertices(vertices []geom.Vec3) []geom.Vec3 {
+	rotatedVertices := make([]geom.Vec3, 0, len(vertices))
+	for _, v := range vertices {
+		rotated := p.rotation.VecMul(v.Sub(p.rotationCenter)).Add(p.rotationCenter)
+		rotatedVertices = append(rotatedVertices, rotated)
+	}
+	return rotatedVertices
 }
 
 // Build triangles from the indexed list. Also applies backface culling.
@@ -54,9 +68,10 @@ func assembleTriangles(vertices []geom.Vec3, indices []int) [][3]geom.Vec3 {
 
 // Transforms the 3D scene to a 2D scene by applying perspective, that can then
 // be drawn on a canvas.
-func transformPerspective(vertex geom.Vec3, width, height int) geom.Vec2 {
+func (p *Pipeline) transformPerspective(vertex geom.Vec3) geom.Vec2 {
+	w, h := p.canv.Dimensions()
 	projected := geom.Project(vertex, 1)
-	return vertexToPoint(projected, width, height)
+	return vertexToPoint(projected, w, h)
 }
 
 func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec2 {

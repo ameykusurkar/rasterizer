@@ -27,71 +27,30 @@ var colors = []color.RGBA{
 }
 
 type game struct {
-	canv   canvas.Canvas
-	cube   geom.IndexedTriangleList
-	thetaX float32
-	thetaY float32
-	thetaZ float32
+	pipeline Pipeline
+	cube     geom.IndexedTriangleList
+	thetaX   float32
+	thetaY   float32
+	thetaZ   float32
 }
 
 func main() {
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Rasterizer")
 	ebiten.SetMaxTPS(60)
+
+	cube := *buildCube()
 	g := game{
-		canv:   *canvas.NewCanvas(screenWidth, screenHeight),
-		cube:   *buildCube(),
-		thetaZ: 0,
+		pipeline: Pipeline{
+			canv:           *canvas.NewCanvas(screenWidth, screenHeight),
+			rotation:       *geom.RotationZ(0),
+			rotationCenter: cube.Vertices[0].Add(cube.Vertices[6]).Scale(0.5),
+		},
+		cube: cube,
 	}
+
 	if err := ebiten.RunGame(&g); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func (g *game) paint() {
-	var d float32 = 1
-	w, h := g.canv.Dimensions()
-
-	rMat := geom.RotationX(g.thetaX).
-		MatMul(geom.RotationY(g.thetaY)).
-		MatMul(geom.RotationZ(g.thetaZ))
-	center := g.cube.Vertices[0].Add(g.cube.Vertices[6]).Scale(0.5)
-
-	rotatedVertices := make([]geom.Vec3, 0, len(g.cube.Vertices))
-	for _, v := range g.cube.Vertices {
-		rotated := rMat.VecMul(v.Sub(center)).Add(center)
-		rotatedVertices = append(rotatedVertices, rotated)
-	}
-
-	projectedPoints := make([]geom.Vec2, 0, len(g.cube.Vertices))
-	for _, rotated := range rotatedVertices {
-		projected := geom.Project(rotated, d)
-		point := vertexToPoint(projected, w, h)
-		projectedPoints = append(projectedPoints, point)
-	}
-
-	g.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
-
-	white := color.RGBA{255, 255, 255, 255}
-	for i := 0; i < len(g.cube.Indices); i += 3 {
-		idx0, idx1, idx2 := g.cube.Indices[i], g.cube.Indices[i+1], g.cube.Indices[i+2]
-
-		v0, v1, v2 := rotatedVertices[idx0], rotatedVertices[idx1], rotatedVertices[idx2]
-		// Assumes that the triangle's vertices are defined in clockwise order
-		normal := v1.Sub(v0).Cross(v2.Sub(v0))
-		if normal.Dot(v0) > 0 {
-			// A positive dot-product indicates that the viewing vector is in the same
-			// direcion as the triangle's normal. This means that we are looking at the
-			// back-face of triangle, which should not be visible.
-			continue
-		}
-
-		p0, p1, p2 := projectedPoints[idx0], projectedPoints[idx1], projectedPoints[idx2]
-
-		g.canv.FillTriangle(p0, p1, p2, colors[(i/3)%len(colors)])
-		g.canv.DrawLine(p0, p1, white)
-		g.canv.DrawLine(p1, p2, white)
-		g.canv.DrawLine(p2, p0, white)
 	}
 }
 
@@ -166,15 +125,19 @@ func (g *game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		g.thetaY -= 0.05
 	}
+	g.pipeline.rotation = *geom.RotationX(g.thetaX).
+		MatMul(geom.RotationY(g.thetaY)).
+		MatMul(geom.RotationZ(g.thetaZ))
 	return nil
 }
 
 func (g *game) Draw(screen *ebiten.Image) {
-	g.paint()
-	screen.ReplacePixels(g.canv.Buffer())
+	g.pipeline.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
+	g.pipeline.Draw(&g.cube)
+	screen.ReplacePixels(g.pipeline.canv.Buffer())
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.CurrentTPS()))
 }
 
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return g.canv.Dimensions()
+	return g.pipeline.canv.Dimensions()
 }
