@@ -90,14 +90,22 @@ func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color
 	if pRight.X < pLeft.X {
 		pLeft, pRight = pRight, pLeft
 	}
+	texLeft, texRight, texBottom := geom.Vec2{X: 0, Y: 1}, geom.Vec2{X: 1, Y: 0}, geom.Vec2{X: 0.5, Y: 0.5}
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
 	mLeft := (pBottom.X - pLeft.X) / (pBottom.Y - pLeft.Y)
 	mRight := (pBottom.X - pRight.X) / (pBottom.Y - pRight.Y)
 
+	mLeftTex := texBottom.Sub(texLeft).Scale(1 / (pBottom.Y - pLeft.Y))
+	mRightTex := texBottom.Sub(texRight).Scale(1 / (pBottom.Y - pRight.Y))
+
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(pLeft.Y)), int(roundHalfDown(pBottom.Y))
+
+	texLeft = texLeft.Add(mLeftTex.Scale(float32(yStart) + 0.5 - pLeft.Y))
+	texRight = texRight.Add(mRightTex.Scale(float32(yStart) + 0.5 - pRight.Y))
+
 	for y := yStart; y < yEnd; y++ {
 		yF := float32(y)
 
@@ -106,11 +114,22 @@ func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color
 		xEndF := mRight*(yF+0.5-pRight.Y) + pRight.X
 
 		// Round half down to follow the top-left rule
+		// TODO: Clean-up meaning
 		xStart, xEnd := int(roundHalfDown(xStartF)), int(roundHalfDown(xEndF))
 
+		mScanTex := texRight.Sub(texLeft).Scale(1 / (xEndF - xStartF))
+		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - xStartF))
+
+		red := geom.Vec3{X: 255, Y: 0, Z: 0}
+		blue := geom.Vec3{X: 0, Y: 0, Z: 255}
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, clr)
+			shade := red.Scale(texCoord.X).Add(blue.Scale(texCoord.Y))
+			c.PutPixel(x, y, color.RGBA{uint8(shade.X), uint8(shade.Y), uint8(shade.Z), 255})
+			texCoord = texCoord.Add(mScanTex)
 		}
+
+		texLeft = texLeft.Add(mLeftTex)
+		texRight = texRight.Add(mRightTex)
 	}
 }
 

@@ -2,11 +2,6 @@ package geometry
 
 import "math"
 
-// Vec2 represents a point or vector in two-dimensional space.
-type Vec2 struct {
-	X, Y float32
-}
-
 // Project returns v projected onto the plane Z = d.
 func Project(v Vec3, d float32) Vec3 {
 	return Vec3{
