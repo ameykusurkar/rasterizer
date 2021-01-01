@@ -145,13 +145,6 @@ func buildCube() *geom.IndexedTriangleList {
 	}
 }
 
-func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec2 {
-	halfWidth, halfHeight := float32(width)/2, float32(height)/2
-	x := (1 + v.X) * halfWidth
-	y := (1 - v.Y) * halfHeight
-	return geom.Vec2{X: float32(int(x)), Y: float32(int(y))}
-}
-
 func (g *game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.Key1) {
 		g.thetaZ += 0.05
