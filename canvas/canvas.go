@@ -49,7 +49,7 @@ func (c *Canvas) PutPixel(x, y int, color color.Color) {
 
 // FillTriangle fills the triangle formed by the given three points with the
 // specified color, using the top-left rule.
-func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
+func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex Texture) {
 	// Sort points by their Y-coordinate
 	if v1.Pos.Y < v0.Pos.Y {
 		v0, v1 = v1, v0
@@ -79,7 +79,7 @@ func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
 	}
 }
 
-func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Texture) {
+func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex Texture) {
 	if vRight.Pos.X < vLeft.Pos.X {
 		vLeft, vRight = vRight, vLeft
 	}
@@ -94,7 +94,7 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 	c.fillTriangleFlat(vLeft, vRight, stepLeft, stepRight, yStart, yEnd, tex)
 }
 
-func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Texture) {
+func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex Texture) {
 	if vRight.Pos.X < vLeft.Pos.X {
 		vLeft, vRight = vRight, vLeft
 	}
@@ -112,7 +112,7 @@ func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Text
 func (c *Canvas) fillTriangleFlat(
 	vLeft, vRight, stepLeft, stepRight TexVertex,
 	yStart, yEnd int,
-	tex *Texture) {
+	tex Texture) {
 	// Add 0.5 because we want to use the midpoint of the pixel
 	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
 	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))

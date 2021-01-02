@@ -35,7 +35,7 @@ type game struct {
 	thetaX   float32
 	thetaY   float32
 	thetaZ   float32
-	tex      canvas.Texture
+	tex      canvas.ImageTextureWrapped
 }
 
 func main() {
@@ -56,7 +56,7 @@ func main() {
 			rotation:       *geom.RotationZ(0),
 			rotationCenter: cube.Vertices[0].Add(cube.Vertices[6]).Scale(0.5),
 		},
-		tex:  canvas.Texture{Img: img},
+		tex:  canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
 		cube: cube,
 	}
 

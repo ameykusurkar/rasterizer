@@ -16,7 +16,7 @@ type Pipeline struct {
 var texPoints = []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}}
 
 // Draw renders the given triangles onto the screen.
-func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList, tex *canvas.Texture) {
+func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList, tex canvas.Texture) {
 	vertices := p.transformVertices(triangleList.Vertices)
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 

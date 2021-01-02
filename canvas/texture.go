@@ -7,25 +7,46 @@ import (
 	geom "rasterizer/geometry"
 )
 
-// Texture is a thing, exactly what it is TBD.
-type Texture struct {
-	Img image.Image
+// Texture is a map that can be used to shade a surface.
+type Texture interface {
+	shade(v TexVertex) color.Color
 }
 
-func (tex *Texture) shade(v TexVertex) color.Color {
+// ImageTextureClamped uses an Image as the texture map. Vertices that go
+// beyond the edge of the image are clamped to the edge of the image.
+type ImageTextureClamped struct {
+	Img   image.Image
+	Scale float32
+}
+
+func (tex *ImageTextureClamped) shade(v TexVertex) color.Color {
 	max := tex.Img.Bounds().Max
 
-	scaledX := int(v.TexPos.X * float32(max.X))
+	scaledX := int(v.TexPos.X * float32(max.X) / tex.Scale)
 	if scaledX > max.X-1 {
 		scaledX = max.X - 1
 	}
 
-	scaledY := int(v.TexPos.Y * float32(max.Y))
+	scaledY := int(v.TexPos.Y * float32(max.Y) / tex.Scale)
 	if scaledY > max.Y-1 {
 		scaledY = max.Y - 1
 	}
 
 	return tex.Img.At(scaledX, scaledY)
+}
+
+// ImageTextureWrapped uses an Image as the texture map. Vertices that go
+// beyond the edge of the image wrap around the image.
+type ImageTextureWrapped struct {
+	Img   image.Image
+	Scale float32
+}
+
+func (tex *ImageTextureWrapped) shade(v TexVertex) color.Color {
+	max := tex.Img.Bounds().Max
+	scaledX := int(v.TexPos.X * float32(max.X) / tex.Scale)
+	scaledY := int(v.TexPos.Y * float32(max.Y) / tex.Scale)
+	return tex.Img.At(scaledX%max.X, scaledY%max.Y)
 }
 
 // TexVertex contains a vertex's position both on a two-dimensional surface (eg. a Canvas),
