@@ -45,3 +45,8 @@ func (v Vec3) Cross(u Vec3) Vec3 {
 		Z: v.X*u.Y - v.Y*u.X,
 	}
 }
+
+// InterpolateTo interpolates the vector towards another vector u by step alpha.
+func (v Vec3) InterpolateTo(u Vec3, alpha float32) Vec3 {
+	return u.Sub(v).Scale(alpha).Add(v)
+}

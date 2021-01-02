@@ -54,7 +54,7 @@ func (tex *ImageTextureWrapped) shade(v TexVertex) color.Color {
 // as we usually need to manipulate both the surface and texture map positions together.
 type TexVertex struct {
 	// Position of the vertex on a two-dimensional surface.
-	Pos geom.Vec2
+	Pos geom.Vec3
 	// Position of the vertex on the texture map, where 0 <= X, Y < 1.
 	TexPos geom.Vec2
 }
