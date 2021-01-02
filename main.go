@@ -31,11 +31,11 @@ var colors = []color.RGBA{
 
 type game struct {
 	pipeline Pipeline
-	cube     geom.IndexedTriangleList
+	cube     canvas.IndexedTriangleList
+	tex      canvas.ImageTextureWrapped
 	thetaX   float32
 	thetaY   float32
 	thetaZ   float32
-	tex      canvas.ImageTextureWrapped
 }
 
 func main() {
@@ -75,19 +75,19 @@ func imageFromPath(path string) (image.Image, error) {
 	return image, err
 }
 
-func buildCube() *geom.IndexedTriangleList {
-	return &geom.IndexedTriangleList{
+func buildCube() *canvas.IndexedTriangleList {
+	return &canvas.IndexedTriangleList{
+		/*  Orientation of vertices
+		 *         4--------5
+		 *        /|       /|
+		 *       / |      / |
+		 *      0--------1  |
+		 *      |  7-----|--6
+		 *      | /      | /
+		 *      |/       |/
+		 *      3--------2
+		 */
 		Vertices: []geom.Vec3{
-			/*  Orientation of vertices
-			 *         4--------5
-			 *        /|       /|
-			 *       / |      / |
-			 *      0--------1  |
-			 *      |  7-----|--6
-			 *      | /      | /
-			 *      |/       |/
-			 *      3--------2
-			 */
 			{X: -1, Y: 1, Z: 2},
 			{X: 1, Y: 1, Z: 2},
 			{X: 1, Y: -1, Z: 2},
@@ -96,6 +96,16 @@ func buildCube() *geom.IndexedTriangleList {
 			{X: 1, Y: 1, Z: 4},
 			{X: 1, Y: -1, Z: 4},
 			{X: -1, Y: -1, Z: 4},
+		},
+		TextureVertices: []geom.Vec2{
+			{X: 0, Y: 0},
+			{X: 1, Y: 0},
+			{X: 1, Y: 1},
+			{X: 0, Y: 1},
+			{X: 0, Y: 0},
+			{X: 1, Y: 0},
+			{X: 1, Y: 1},
+			{X: 0, Y: 1},
 		},
 		Indices: []int{
 			// Front

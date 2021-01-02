@@ -16,12 +16,14 @@ type Pipeline struct {
 var texPoints = []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}}
 
 // Draw renders the given triangles onto the screen.
-func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList, tex canvas.Texture) {
+func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Texture) {
 	vertices := p.transformVertices(triangleList.Vertices)
-	triangles3D := assembleTriangles(vertices, triangleList.Indices)
+
+	// TODO: Find a cleaner way of passing around the texture vertices
+	triangles3D, triangles3DIndices := assembleTriangles(vertices, triangleList.Indices)
 
 	white := color.RGBA{255, 255, 255, 255}
-	for _, tri3D := range triangles3D {
+	for i, tri3D := range triangles3D {
 		tri2D := [3]geom.Vec2{
 			p.transformPerspective(tri3D[0]),
 			p.transformPerspective(tri3D[1]),
@@ -29,9 +31,9 @@ func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList, tex canvas.Textu
 		}
 
 		p.canv.FillTriangle(
-			canvas.TexVertex{Pos: tri2D[0], TexPos: texPoints[0]},
-			canvas.TexVertex{Pos: tri2D[1], TexPos: texPoints[1]},
-			canvas.TexVertex{Pos: tri2D[2], TexPos: texPoints[2]},
+			canvas.TexVertex{Pos: tri2D[0], TexPos: triangleList.TextureVertices[triangles3DIndices[i][0]]},
+			canvas.TexVertex{Pos: tri2D[1], TexPos: triangleList.TextureVertices[triangles3DIndices[i][1]]},
+			canvas.TexVertex{Pos: tri2D[2], TexPos: triangleList.TextureVertices[triangles3DIndices[i][2]]},
 			tex,
 		)
 		p.canv.DrawLine(tri2D[0], tri2D[1], white)
@@ -59,8 +61,9 @@ func (p *Pipeline) transformVertices(vertices []geom.Vec3) []geom.Vec3 {
 }
 
 // Build triangles from the indexed list. Also applies backface culling.
-func assembleTriangles(vertices []geom.Vec3, indices []int) [][3]geom.Vec3 {
+func assembleTriangles(vertices []geom.Vec3, indices []int) ([][3]geom.Vec3, [][3]int) {
 	triangles := make([][3]geom.Vec3, 0)
+	triangleIndices := make([][3]int, 0)
 
 	for i := 0; i < len(indices); i += 3 {
 		idx0, idx1, idx2 := indices[i], indices[i+1], indices[i+2]
@@ -76,9 +79,10 @@ func assembleTriangles(vertices []geom.Vec3, indices []int) [][3]geom.Vec3 {
 		}
 
 		triangles = append(triangles, [3]geom.Vec3{v0, v1, v2})
+		triangleIndices = append(triangleIndices, [3]int{idx0, idx1, idx2})
 	}
 
-	return triangles
+	return triangles, triangleIndices
 }
 
 // Transforms the 3D scene to a 2D scene by applying perspective, that can then

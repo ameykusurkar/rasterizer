@@ -8,6 +8,13 @@ import (
 	geom "rasterizer/geometry"
 )
 
+// IndexedTriangleList represents shapes using triangles.
+type IndexedTriangleList struct {
+	Vertices        []geom.Vec3
+	TextureVertices []geom.Vec2
+	Indices         []int
+}
+
 // Canvas is a buffer on which we can draw lines, triangles etc.
 type Canvas struct {
 	image *image.RGBA
@@ -69,10 +76,7 @@ func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex Texture) {
 		c.fillTriangleFlatBottom(vTop, vMid, vBottom, tex)
 	default:
 		alpha := (vMid.Pos.Y - vTop.Pos.Y) / (vBottom.Pos.Y - vTop.Pos.Y)
-		vSplit := TexVertex{
-			Pos:    vTop.Pos.InterpolateTo(vBottom.Pos, alpha),
-			TexPos: vTop.TexPos.InterpolateTo(vBottom.TexPos, alpha),
-		}
+		vSplit := vTop.InterpolateTo(vBottom, alpha)
 
 		c.fillTriangleFlatBottom(vTop, vMid, vSplit, tex)
 		c.fillTriangleFlatTop(vMid, vSplit, vBottom, tex)

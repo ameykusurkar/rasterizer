@@ -11,18 +11,6 @@ func Project(v Vec3, d float32) Vec3 {
 	}
 }
 
-// IndexedLineList uses a vertex buffer and an index buffer to represent three-dimensional shapes.
-type IndexedLineList struct {
-	Vertices []Vec3
-	Indices  []int
-}
-
-// IndexedTriangleList represents shapes using triangles.
-type IndexedTriangleList struct {
-	Vertices []Vec3
-	Indices  []int
-}
-
 // Mat3 is a 3x3 matrix.
 type Mat3 [3][3]float32
 
