@@ -28,3 +28,8 @@ func (v Vec2) Add(u Vec2) Vec2 {
 		Y: v.Y + u.Y,
 	}
 }
+
+// Interpolate2D returns the interpolation vectors u and v.
+func Interpolate2D(u, v Vec2, alpha float32) Vec2 {
+  return v.Sub(u).Scale(alpha).Add(u)
+}

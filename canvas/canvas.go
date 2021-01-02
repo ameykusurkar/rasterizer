@@ -11,13 +11,23 @@ import (
 // Texture is a thing, exactly what it is TBD.
 type Texture struct {
 	Points []geom.Vec2
+	Colors []geom.Vec3
 }
 
 func (tex *Texture) shade(texCoord geom.Vec2) color.Color {
-	red := geom.Vec3{X: 255, Y: 0, Z: 0}
-	blue := geom.Vec3{X: 0, Y: 0, Z: 255}
-	colorVec := red.Scale(texCoord.X).Add(blue.Scale(texCoord.Y))
+	colorVec := tex.Colors[0].Scale(texCoord.X).Add(tex.Colors[1].Scale(texCoord.Y))
 	return color.RGBA{uint8(colorVec.X), uint8(colorVec.Y), uint8(colorVec.Z), 255}
+}
+
+// TexVertex represents a vertex than contains both its coordinates in
+// 3D space, and its coordinates on a texture map. This allows us to manipulate
+// the vertex while also updating its corresponding position on the texture map.
+type TexVertex struct {
+	// Position of the vertex in 3D space.
+	// TODO: 2D or 3D?
+	Pos geom.Vec2
+	// Position of the vertex on the texture map, where 0 <= X, Y < 1.
+	TexPos geom.Vec2
 }
 
 // Canvas is a buffer on which we can draw lines, triangles etc.
@@ -68,41 +78,49 @@ func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
 
 // FillTriangle fills the triangle formed by the given three points with the
 // specified color, using the top-left rule.
-func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, tex *Texture) {
+func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
 	// Sort points by their Y-coordinate
-	if p1.Y < p0.Y {
-		p0, p1 = p1, p0
+	if v1.Pos.Y < v0.Pos.Y {
+		v0, v1 = v1, v0
 	}
-	if p2.Y < p0.Y {
-		p0, p2 = p2, p0
+	if v2.Pos.Y < v0.Pos.Y {
+		v0, v2 = v2, v0
 	}
-	if p2.Y < p1.Y {
-		p1, p2 = p2, p1
+	if v2.Pos.Y < v1.Pos.Y {
+		v1, v2 = v2, v1
 	}
-	pTop, pMid, pBottom := p0, p1, p2
+	vTop, vMid, vBottom := v0, v1, v2
 
 	switch {
-	case pTop.Y == pMid.Y:
-		c.fillTriangleFlatTop(pTop, pMid, pBottom, tex)
-	case pMid.Y == pBottom.Y:
-		c.fillTriangleFlatBottom(pTop, pMid, pBottom, tex)
+	case vTop.Pos.Y == vMid.Pos.Y:
+		c.fillTriangleFlatTop(vTop, vMid, vBottom, tex)
+	case vMid.Pos.Y == vBottom.Pos.Y:
+		c.fillTriangleFlatBottom(vTop, vMid, vBottom, tex)
 	default:
-		mSplit := (pBottom.X - pTop.X) / (pBottom.Y - pTop.Y)
+		mSplit := (vBottom.Pos.X - vTop.Pos.X) / (vBottom.Pos.Y - vTop.Pos.Y)
 		pSplit := geom.Vec2{
-			X: mSplit*(pMid.Y-pTop.Y) + pTop.X,
-			Y: pMid.Y,
+			X: mSplit*(vMid.Pos.Y-vTop.Pos.Y) + vTop.Pos.X,
+			Y: vMid.Pos.Y,
 		}
 
-		c.fillTriangleFlatBottom(pTop, pMid, pSplit, tex)
-		c.fillTriangleFlatTop(pMid, pSplit, pBottom, tex)
+		alpha := (vMid.Pos.Y - vTop.Pos.Y) / (vBottom.Pos.Y - vTop.Pos.Y)
+
+		vSplit := TexVertex{
+			Pos:    pSplit,
+			TexPos: geom.Interpolate2D(vTop.TexPos, vBottom.TexPos, alpha),
+		}
+
+		c.fillTriangleFlatBottom(vTop, vMid, vSplit, tex)
+		c.fillTriangleFlatTop(vMid, vSplit, vBottom, tex)
 	}
 }
 
-func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, tex *Texture) {
-	if pRight.X < pLeft.X {
-		pLeft, pRight = pRight, pLeft
+func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Texture) {
+	if vRight.Pos.X < vLeft.Pos.X {
+		vLeft, vRight = vRight, vLeft
 	}
-	texLeft, texRight, texBottom := tex.Points[0], tex.Points[1], tex.Points[2]
+	texLeft, texRight, texBottom := vLeft.TexPos, vRight.TexPos, vBottom.TexPos
+	pLeft, pRight, pBottom := vLeft.Pos, vRight.Pos, vBottom.Pos
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
@@ -142,11 +160,12 @@ func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, tex *Text
 	}
 }
 
-func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, tex *Texture) {
-	if pRight.X < pLeft.X {
-		pLeft, pRight = pRight, pLeft
+func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Texture) {
+	if vRight.Pos.X < vLeft.Pos.X {
+		vLeft, vRight = vRight, vLeft
 	}
-	texLeft, texTop, texRight := tex.Points[0], tex.Points[1], tex.Points[2]
+	texTop, texLeft, texRight := vTop.TexPos, vLeft.TexPos, vRight.TexPos
+	pTop, pLeft, pRight := vTop.Pos, vLeft.Pos, vRight.Pos
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
