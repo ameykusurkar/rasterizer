@@ -90,25 +90,7 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(vLeft.Pos.Y)), int(roundHalfDown(vBottom.Pos.Y))
 
-	// Add 0.5 because we want to use the midpoint of the pixel
-	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
-	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))
-
-	for y := yStart; y < yEnd; y++ {
-		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(scanLeft.Pos.X)), int(roundHalfDown(scanRight.Pos.X))
-
-		stepTex := scanRight.TexPos.Sub(scanLeft.TexPos).Scale(1 / (scanRight.Pos.X - scanLeft.Pos.X))
-		texCoord := scanLeft.TexPos.Add(stepTex.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
-
-		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, tex.shade(texCoord))
-			texCoord = texCoord.Add(stepTex)
-		}
-
-		scanLeft = scanLeft.Add(stepLeft)
-		scanRight = scanRight.Add(stepRight)
-	}
+	c.fillTriangleFlat(vLeft, vRight, stepLeft, stepRight, yStart, yEnd, tex)
 }
 
 func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Texture) {
@@ -122,6 +104,13 @@ func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Text
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(vTop.Pos.Y)), int(roundHalfDown(vLeft.Pos.Y))
 
+	c.fillTriangleFlat(vLeft, vRight, stepLeft, stepRight, yStart, yEnd, tex)
+}
+
+func (c *Canvas) fillTriangleFlat(
+	vLeft, vRight, stepLeft, stepRight TexVertex,
+	yStart, yEnd int,
+	tex *Texture) {
 	// Add 0.5 because we want to use the midpoint of the pixel
 	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
 	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))
