@@ -8,13 +8,9 @@ import (
 	geom "rasterizer/geometry"
 )
 
-var defaultTexture Texture = Texture{
-	points: []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 0.5, Y: 0.5}},
-}
-
 // Texture is a thing, exactly what it is TBD.
 type Texture struct {
-	points []geom.Vec2
+	Points []geom.Vec2
 }
 
 func (tex *Texture) shade(texCoord geom.Vec2) color.Color {
@@ -72,7 +68,7 @@ func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
 
 // FillTriangle fills the triangle formed by the given three points with the
 // specified color, using the top-left rule.
-func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, clr color.Color) {
+func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, tex *Texture) {
 	// Sort points by their Y-coordinate
 	if p1.Y < p0.Y {
 		p0, p1 = p1, p0
@@ -87,9 +83,9 @@ func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, clr color.Color) {
 
 	switch {
 	case pTop.Y == pMid.Y:
-		c.fillTriangleFlatTop(pTop, pMid, pBottom, clr)
+		c.fillTriangleFlatTop(pTop, pMid, pBottom, tex)
 	case pMid.Y == pBottom.Y:
-		c.fillTriangleFlatBottom(pTop, pMid, pBottom, clr)
+		c.fillTriangleFlatBottom(pTop, pMid, pBottom, tex)
 	default:
 		mSplit := (pBottom.X - pTop.X) / (pBottom.Y - pTop.Y)
 		pSplit := geom.Vec2{
@@ -97,16 +93,16 @@ func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, clr color.Color) {
 			Y: pMid.Y,
 		}
 
-		c.fillTriangleFlatBottom(pTop, pMid, pSplit, clr)
-		c.fillTriangleFlatTop(pMid, pSplit, pBottom, clr)
+		c.fillTriangleFlatBottom(pTop, pMid, pSplit, tex)
+		c.fillTriangleFlatTop(pMid, pSplit, pBottom, tex)
 	}
 }
 
-func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color.Color) {
+func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, tex *Texture) {
 	if pRight.X < pLeft.X {
 		pLeft, pRight = pRight, pLeft
 	}
-	texLeft, texRight, texBottom := defaultTexture.points[0], defaultTexture.points[1], defaultTexture.points[2]
+	texLeft, texRight, texBottom := tex.Points[0], tex.Points[1], tex.Points[2]
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
@@ -134,7 +130,7 @@ func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color
 		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, defaultTexture.shade(texCoord))
+			c.PutPixel(x, y, tex.shade(texCoord))
 			texCoord = texCoord.Add(mScanTex)
 		}
 
@@ -146,11 +142,11 @@ func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color
 	}
 }
 
-func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, clr color.Color) {
+func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, tex *Texture) {
 	if pRight.X < pLeft.X {
 		pLeft, pRight = pRight, pLeft
 	}
-	texLeft, texTop, texRight := defaultTexture.points[0], defaultTexture.points[1], defaultTexture.points[2]
+	texLeft, texTop, texRight := tex.Points[0], tex.Points[1], tex.Points[2]
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
@@ -178,7 +174,7 @@ func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, clr color
 		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, defaultTexture.shade(texCoord))
+			c.PutPixel(x, y, tex.shade(texCoord))
 			texCoord = texCoord.Add(mScanTex)
 		}
 

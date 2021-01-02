@@ -13,23 +13,35 @@ type Pipeline struct {
 	rotationCenter geom.Vec3
 }
 
+var defaultTexture canvas.Texture = canvas.Texture{
+	Points: []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 0.5, Y: 0.5}},
+}
+
 // Draw renders the given triangles onto the screen.
 func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList) {
 	vertices := p.transformVertices(triangleList.Vertices)
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
 	white := color.RGBA{255, 255, 255, 255}
-	for i, tri3D := range triangles3D {
+	for _, tri3D := range triangles3D {
 		tri2D := [3]geom.Vec2{
 			p.transformPerspective(tri3D[0]),
 			p.transformPerspective(tri3D[1]),
 			p.transformPerspective(tri3D[2]),
 		}
 
-		p.canv.FillTriangle(tri2D[0], tri2D[1], tri2D[2], colors[i])
+		p.canv.FillTriangle(tri2D[0], tri2D[1], tri2D[2], &defaultTexture)
 		p.canv.DrawLine(tri2D[0], tri2D[1], white)
 		p.canv.DrawLine(tri2D[1], tri2D[2], white)
 		p.canv.DrawLine(tri2D[2], tri2D[0], white)
+	}
+}
+
+func colorToVec3(clr color.RGBA) geom.Vec3 {
+	return geom.Vec3{
+		X: float32(clr.R),
+		Y: float32(clr.G),
+		Z: float32(clr.B),
 	}
 }
 
