@@ -8,28 +8,6 @@ import (
 	geom "rasterizer/geometry"
 )
 
-// Texture is a thing, exactly what it is TBD.
-type Texture struct {
-	Points []geom.Vec2
-	Colors []geom.Vec3
-}
-
-func (tex *Texture) shade(texCoord geom.Vec2) color.Color {
-	colorVec := tex.Colors[0].Scale(texCoord.X).Add(tex.Colors[1].Scale(texCoord.Y))
-	return color.RGBA{uint8(colorVec.X), uint8(colorVec.Y), uint8(colorVec.Z), 255}
-}
-
-// TexVertex represents a vertex than contains both its coordinates in
-// 3D space, and its coordinates on a texture map. This allows us to manipulate
-// the vertex while also updating its corresponding position on the texture map.
-type TexVertex struct {
-	// Position of the vertex in 3D space.
-	// TODO: 2D or 3D?
-	Pos geom.Vec2
-	// Position of the vertex on the texture map, where 0 <= X, Y < 1.
-	TexPos geom.Vec2
-}
-
 // Canvas is a buffer on which we can draw lines, triangles etc.
 type Canvas struct {
 	image *image.RGBA
@@ -110,8 +88,8 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
-	mLeft := (pBottom.X - pLeft.X) / (pBottom.Y - pLeft.Y)
-	mRight := (pBottom.X - pRight.X) / (pBottom.Y - pRight.Y)
+	mLeft := pBottom.Sub(pLeft).Scale(1 / (pBottom.Y - pLeft.Y))
+	mRight := pBottom.Sub(pRight).Scale(1 / (pBottom.Y - pRight.Y))
 
 	mLeftTex := texBottom.Sub(texLeft).Scale(1 / (pBottom.Y - pLeft.Y))
 	mRightTex := texBottom.Sub(texRight).Scale(1 / (pBottom.Y - pRight.Y))
@@ -120,26 +98,26 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 	yStart, yEnd := int(roundHalfDown(pLeft.Y)), int(roundHalfDown(pBottom.Y))
 
 	// Add 0.5 because we want to use the midpoint of the pixel
-	scanLeft := mLeft*(float32(yStart)+0.5-pLeft.Y) + pLeft.X
-	scanRight := mRight*(float32(yStart)+0.5-pRight.Y) + pRight.X
+	scanLeft := pLeft.Add(mLeft.Scale(float32(yStart) + 0.5 - pLeft.Y))
+	scanRight := pRight.Add(mRight.Scale(float32(yStart) + 0.5 - pRight.Y))
 
 	texLeft = texLeft.Add(mLeftTex.Scale(float32(yStart) + 0.5 - pLeft.Y))
 	texRight = texRight.Add(mRightTex.Scale(float32(yStart) + 0.5 - pRight.Y))
 
 	for y := yStart; y < yEnd; y++ {
 		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(scanLeft)), int(roundHalfDown(scanRight))
+		xStart, xEnd := int(roundHalfDown(scanLeft.X)), int(roundHalfDown(scanRight.X))
 
-		mScanTex := texRight.Sub(texLeft).Scale(1 / (scanRight - scanLeft))
-		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft))
+		mScanTex := texRight.Sub(texLeft).Scale(1 / (scanRight.X - scanLeft.X))
+		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft.X))
 
 		for x := xStart; x < xEnd; x++ {
 			c.PutPixel(x, y, tex.shade(texCoord))
 			texCoord = texCoord.Add(mScanTex)
 		}
 
-		scanLeft += mLeft
-		scanRight += mRight
+		scanLeft = scanLeft.Add(mLeft)
+		scanRight = scanRight.Add(mRight)
 
 		texLeft = texLeft.Add(mLeftTex)
 		texRight = texRight.Add(mRightTex)
