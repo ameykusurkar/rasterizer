@@ -2,11 +2,6 @@ package geometry
 
 import "math"
 
-// Vec2 represents a point or vector in two-dimensional space.
-type Vec2 struct {
-	X, Y float32
-}
-
 // Project returns v projected onto the plane Z = d.
 func Project(v Vec3, d float32) Vec3 {
 	return Vec3{
@@ -14,18 +9,6 @@ func Project(v Vec3, d float32) Vec3 {
 		Y: v.Y * d / v.Z,
 		Z: v.Z,
 	}
-}
-
-// IndexedLineList uses a vertex buffer and an index buffer to represent three-dimensional shapes.
-type IndexedLineList struct {
-	Vertices []Vec3
-	Indices  []int
-}
-
-// IndexedTriangleList represents shapes using triangles.
-type IndexedTriangleList struct {
-	Vertices []Vec3
-	Indices  []int
 }
 
 // Mat3 is a 3x3 matrix.

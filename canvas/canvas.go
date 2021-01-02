@@ -8,6 +8,13 @@ import (
 	geom "rasterizer/geometry"
 )
 
+// IndexedTriangleList represents shapes using triangles.
+type IndexedTriangleList struct {
+	Vertices        []geom.Vec3
+	TextureVertices []geom.Vec2
+	Indices         []int
+}
+
 // Canvas is a buffer on which we can draw lines, triangles etc.
 type Canvas struct {
 	image *image.RGBA
@@ -47,98 +54,88 @@ func (c *Canvas) PutPixel(x, y int, color color.Color) {
 	c.image.Set(x, y, color)
 }
 
-// DrawLine draws a line with a specified color between two points.
-func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
-	for _, vert := range interpolate(p0, p1) {
-		c.PutPixel(int(vert.X), int(vert.Y), clr)
-	}
-}
-
 // FillTriangle fills the triangle formed by the given three points with the
 // specified color, using the top-left rule.
-func (c *Canvas) FillTriangle(p0, p1, p2 geom.Vec2, clr color.Color) {
+func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex Texture) {
 	// Sort points by their Y-coordinate
-	if p1.Y < p0.Y {
-		p0, p1 = p1, p0
+	if v1.Pos.Y < v0.Pos.Y {
+		v0, v1 = v1, v0
 	}
-	if p2.Y < p0.Y {
-		p0, p2 = p2, p0
+	if v2.Pos.Y < v0.Pos.Y {
+		v0, v2 = v2, v0
 	}
-	if p2.Y < p1.Y {
-		p1, p2 = p2, p1
+	if v2.Pos.Y < v1.Pos.Y {
+		v1, v2 = v2, v1
 	}
-	pTop, pMid, pBottom := p0, p1, p2
+	vTop, vMid, vBottom := v0, v1, v2
 
 	switch {
-	case pTop.Y == pMid.Y:
-		c.fillTriangleFlatTop(pTop, pMid, pBottom, clr)
-	case pMid.Y == pBottom.Y:
-		c.fillTriangleFlatBottom(pTop, pMid, pBottom, clr)
+	case vTop.Pos.Y == vMid.Pos.Y:
+		c.fillTriangleFlatTop(vTop, vMid, vBottom, tex)
+	case vMid.Pos.Y == vBottom.Pos.Y:
+		c.fillTriangleFlatBottom(vTop, vMid, vBottom, tex)
 	default:
-		mSplit := (pBottom.X - pTop.X) / (pBottom.Y - pTop.Y)
-		pSplit := geom.Vec2{
-			X: mSplit*(pMid.Y-pTop.Y) + pTop.X,
-			Y: pMid.Y,
-		}
+		alpha := (vMid.Pos.Y - vTop.Pos.Y) / (vBottom.Pos.Y - vTop.Pos.Y)
+		vSplit := vTop.InterpolateTo(vBottom, alpha)
 
-		c.fillTriangleFlatBottom(pTop, pMid, pSplit, clr)
-		c.fillTriangleFlatTop(pMid, pSplit, pBottom, clr)
+		c.fillTriangleFlatBottom(vTop, vMid, vSplit, tex)
+		c.fillTriangleFlatTop(vMid, vSplit, vBottom, tex)
 	}
 }
 
-func (c *Canvas) fillTriangleFlatTop(pLeft, pRight, pBottom geom.Vec2, clr color.Color) {
-	if pRight.X < pLeft.X {
-		pLeft, pRight = pRight, pLeft
+func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex Texture) {
+	if vRight.Pos.X < vLeft.Pos.X {
+		vLeft, vRight = vRight, vLeft
 	}
 
-	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
-	// to increment x by as we iterate down the Y-axis.
-	mLeft := (pBottom.X - pLeft.X) / (pBottom.Y - pLeft.Y)
-	mRight := (pBottom.X - pRight.X) / (pBottom.Y - pRight.Y)
+	deltaY := vBottom.Pos.Y - vLeft.Pos.Y
+	stepLeft := vBottom.Sub(vLeft).Scale(1 / deltaY)
+	stepRight := vBottom.Sub(vRight).Scale(1 / deltaY)
 
 	// Round half down to follow the top-left rule
-	yStart, yEnd := int(roundHalfDown(pLeft.Y)), int(roundHalfDown(pBottom.Y))
-	for y := yStart; y < yEnd; y++ {
-		yF := float32(y)
+	yStart, yEnd := int(roundHalfDown(vLeft.Pos.Y)), int(roundHalfDown(vBottom.Pos.Y))
 
-		// Add 0.5 because we want to use the midpoint of the pixel
-		xStartF := mLeft*(yF+0.5-pLeft.Y) + pLeft.X
-		xEndF := mRight*(yF+0.5-pRight.Y) + pRight.X
-
-		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(xStartF)), int(roundHalfDown(xEndF))
-
-		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, clr)
-		}
-	}
+	c.fillTriangleFlat(vLeft, vRight, stepLeft, stepRight, yStart, yEnd, tex)
 }
 
-func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, clr color.Color) {
-	if pRight.X < pLeft.X {
-		pLeft, pRight = pRight, pLeft
+func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex Texture) {
+	if vRight.Pos.X < vLeft.Pos.X {
+		vLeft, vRight = vRight, vLeft
 	}
 
-	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
-	// to increment x by as we iterate down the Y-axis.
-	mLeft := (pLeft.X - pTop.X) / (pLeft.Y - pTop.Y)
-	mRight := (pRight.X - pTop.X) / (pRight.Y - pTop.Y)
+	deltaY := vLeft.Pos.Y - vTop.Pos.Y
+	stepLeft := vLeft.Sub(vTop).Scale(1 / deltaY)
+	stepRight := vRight.Sub(vTop).Scale(1 / deltaY)
 
 	// Round half down to follow the top-left rule
-	yStart, yEnd := int(roundHalfDown(pTop.Y)), int(roundHalfDown(pLeft.Y))
+	yStart, yEnd := int(roundHalfDown(vTop.Pos.Y)), int(roundHalfDown(vLeft.Pos.Y))
+
+	c.fillTriangleFlat(vLeft, vRight, stepLeft, stepRight, yStart, yEnd, tex)
+}
+
+func (c *Canvas) fillTriangleFlat(
+	vLeft, vRight, stepLeft, stepRight TexVertex,
+	yStart, yEnd int,
+	tex Texture) {
+	// Add 0.5 because we want to use the midpoint of the pixel
+	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
+	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))
+
 	for y := yStart; y < yEnd; y++ {
-		yF := float32(y)
-
-		// Add 0.5 because we want to use the midpoint of the pixel
-		xStartF := mLeft*(yF+0.5-pLeft.Y) + pLeft.X
-		xEndF := mRight*(yF+0.5-pRight.Y) + pRight.X
-
 		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(xStartF)), int(roundHalfDown(xEndF))
+		xStart, xEnd := int(roundHalfDown(scanLeft.Pos.X)), int(roundHalfDown(scanRight.Pos.X))
+
+		deltaX := scanRight.Pos.X - scanLeft.Pos.X
+		step := scanRight.Sub(scanLeft).Scale(1 / deltaX)
+		scanCoord := scanLeft.Add(step.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, clr)
+			c.PutPixel(x, y, tex.shade(scanCoord))
+			scanCoord = scanCoord.Add(step)
 		}
+
+		scanLeft = scanLeft.Add(stepLeft)
+		scanRight = scanRight.Add(stepRight)
 	}
 }
 
@@ -147,59 +144,10 @@ func roundHalfDown(x float32) float32 {
 	return float32(math.Ceil(float64(x) - 0.5))
 }
 
-// ShadeTriangle shades the triangle formed by the given three points with the specified color, with a gradient.
-// TODO: This uses an old algorithm and needs to be updated.
-func (c *Canvas) ShadeTriangle(p0, p1, p2 geom.Vec2, clr color.RGBA) {
-	if p1.Y < p0.Y {
-		p0, p1 = p1, p0
-	}
-	if p2.Y < p0.Y {
-		p0, p2 = p2, p0
-	}
-	if p2.Y < p1.Y {
-		p1, p2 = p2, p1
-	}
-
-	h0, h1, h2 := float32(0.0), float32(0.5), float32(1.0)
-
-	x01 := interpolateVertical(p0, p1)
-	h01 := interpolateVertical(geom.Vec2{X: h0, Y: p0.Y}, geom.Vec2{X: h1, Y: p1.Y})
-	x01 = x01[:len(x01)-1] // Last value overlaps with x12
-	h01 = h01[:len(h01)-1] // Last value overlaps with h12
-
-	x12 := interpolateVertical(p1, p2)
-	h12 := interpolateVertical(geom.Vec2{X: h1, Y: p1.Y}, geom.Vec2{X: h2, Y: p2.Y})
-
-	x02 := interpolateVertical(p0, p2)
-	h02 := interpolateVertical(geom.Vec2{X: h0, Y: p0.Y}, geom.Vec2{X: h2, Y: p2.Y})
-
-	x012 := append(x01, x12...)
-	h012 := append(h01, h12...)
-
-	var xLefts, xRights []geom.Vec2
-	var hLefts, hRights []geom.Vec2
-	if x01[len(x01)-1].X < x02[len(x01)-1].X {
-		xLefts, xRights = x012, x02
-		hLefts, hRights = h012, h02
-	} else {
-		xLefts, xRights = x02, x012
-		hLefts, hRights = h02, h012
-	}
-
-	for i := 0; i < len(x02); i++ {
-		xLeft, xRight := xLefts[i].X, xRights[i].X
-		hLeft, hRight := hLefts[i].X, hRights[i].X
-		hh := interpolateHorizontal(geom.Vec2{X: xLeft, Y: hLeft}, geom.Vec2{X: xRight, Y: hRight})
-		for x := xLeft; x <= xRight; x++ {
-			hGrad := hh[int(x-xLeft)].Y
-			gradColor := color.RGBA{
-				R: uint8(hGrad * float32(clr.R)),
-				G: uint8(hGrad * float32(clr.G)),
-				B: uint8(hGrad * float32(clr.B)),
-				A: 0xFF,
-			}
-			c.PutPixel(int(x), int(xLefts[i].Y), gradColor)
-		}
+// DrawLine draws a line with a specified color between two points.
+func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
+	for _, vert := range interpolate(p0, p1) {
+		c.PutPixel(int(vert.X), int(vert.Y), clr)
 	}
 }
 

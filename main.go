@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	_ "image/png"
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -28,7 +31,8 @@ var colors = []color.RGBA{
 
 type game struct {
 	pipeline Pipeline
-	cube     geom.IndexedTriangleList
+	cube     canvas.IndexedTriangleList
+	tex      canvas.ImageTextureWrapped
 	thetaX   float32
 	thetaY   float32
 	thetaZ   float32
@@ -39,6 +43,12 @@ func main() {
 	ebiten.SetWindowTitle("Rasterizer")
 	ebiten.SetMaxTPS(60)
 
+	img, err := imageFromPath("insta.png")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	cube := *buildCube()
 	g := game{
 		pipeline: Pipeline{
@@ -46,6 +56,7 @@ func main() {
 			rotation:       *geom.RotationZ(0),
 			rotationCenter: cube.Vertices[0].Add(cube.Vertices[6]).Scale(0.5),
 		},
+		tex:  canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
 		cube: cube,
 	}
 
@@ -54,19 +65,29 @@ func main() {
 	}
 }
 
-func buildCube() *geom.IndexedTriangleList {
-	return &geom.IndexedTriangleList{
+func imageFromPath(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	image, _, err := image.Decode(f)
+	return image, err
+}
+
+func buildCube() *canvas.IndexedTriangleList {
+	return &canvas.IndexedTriangleList{
+		/*  Orientation of vertices
+		 *         4--------5
+		 *        /|       /|
+		 *       / |      / |
+		 *      0--------1  |
+		 *      |  7-----|--6
+		 *      | /      | /
+		 *      |/       |/
+		 *      3--------2
+		 */
 		Vertices: []geom.Vec3{
-			/*  Orientation of vertices
-			 *         4--------5
-			 *        /|       /|
-			 *       / |      / |
-			 *      0--------1  |
-			 *      |  7-----|--6
-			 *      | /      | /
-			 *      |/       |/
-			 *      3--------2
-			 */
 			{X: -1, Y: 1, Z: 2},
 			{X: 1, Y: 1, Z: 2},
 			{X: 1, Y: -1, Z: 2},
@@ -75,6 +96,16 @@ func buildCube() *geom.IndexedTriangleList {
 			{X: 1, Y: 1, Z: 4},
 			{X: 1, Y: -1, Z: 4},
 			{X: -1, Y: -1, Z: 4},
+		},
+		TextureVertices: []geom.Vec2{
+			{X: 0, Y: 0},
+			{X: 1, Y: 0},
+			{X: 1, Y: 1},
+			{X: 0, Y: 1},
+			{X: 0, Y: 0},
+			{X: 1, Y: 0},
+			{X: 1, Y: 1},
+			{X: 0, Y: 1},
 		},
 		Indices: []int{
 			// Front
@@ -133,7 +164,7 @@ func (g *game) Update() error {
 
 func (g *game) Draw(screen *ebiten.Image) {
 	g.pipeline.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
-	g.pipeline.Draw(&g.cube)
+	g.pipeline.Draw(&g.cube, &g.tex)
 	screen.ReplacePixels(g.pipeline.canv.Buffer())
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.CurrentTPS()))
 }
