@@ -83,44 +83,31 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 	if vRight.Pos.X < vLeft.Pos.X {
 		vLeft, vRight = vRight, vLeft
 	}
-	texLeft, texRight, texBottom := vLeft.TexPos, vRight.TexPos, vBottom.TexPos
-	pLeft, pRight, pBottom := vLeft.Pos, vRight.Pos, vBottom.Pos
 
-	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
-	// to increment x by as we iterate down the Y-axis.
-	mLeft := pBottom.Sub(pLeft).Scale(1 / (pBottom.Y - pLeft.Y))
-	mRight := pBottom.Sub(pRight).Scale(1 / (pBottom.Y - pRight.Y))
-
-	mLeftTex := texBottom.Sub(texLeft).Scale(1 / (pBottom.Y - pLeft.Y))
-	mRightTex := texBottom.Sub(texRight).Scale(1 / (pBottom.Y - pRight.Y))
+	stepLeft := vBottom.Sub(vLeft).Scale(1 / (vBottom.Pos.Y - vLeft.Pos.Y))
+	stepRight := vBottom.Sub(vRight).Scale(1 / (vBottom.Pos.Y - vRight.Pos.Y))
 
 	// Round half down to follow the top-left rule
-	yStart, yEnd := int(roundHalfDown(pLeft.Y)), int(roundHalfDown(pBottom.Y))
+	yStart, yEnd := int(roundHalfDown(vLeft.Pos.Y)), int(roundHalfDown(vBottom.Pos.Y))
 
 	// Add 0.5 because we want to use the midpoint of the pixel
-	scanLeft := pLeft.Add(mLeft.Scale(float32(yStart) + 0.5 - pLeft.Y))
-	scanRight := pRight.Add(mRight.Scale(float32(yStart) + 0.5 - pRight.Y))
-
-	texLeft = texLeft.Add(mLeftTex.Scale(float32(yStart) + 0.5 - pLeft.Y))
-	texRight = texRight.Add(mRightTex.Scale(float32(yStart) + 0.5 - pRight.Y))
+	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
+	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))
 
 	for y := yStart; y < yEnd; y++ {
 		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(scanLeft.X)), int(roundHalfDown(scanRight.X))
+		xStart, xEnd := int(roundHalfDown(scanLeft.Pos.X)), int(roundHalfDown(scanRight.Pos.X))
 
-		mScanTex := texRight.Sub(texLeft).Scale(1 / (scanRight.X - scanLeft.X))
-		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft.X))
+		stepTex := scanRight.TexPos.Sub(scanLeft.TexPos).Scale(1 / (scanRight.Pos.X - scanLeft.Pos.X))
+		texCoord := scanLeft.TexPos.Add(stepTex.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
 			c.PutPixel(x, y, tex.shade(texCoord))
-			texCoord = texCoord.Add(mScanTex)
+			texCoord = texCoord.Add(stepTex)
 		}
 
-		scanLeft = scanLeft.Add(mLeft)
-		scanRight = scanRight.Add(mRight)
-
-		texLeft = texLeft.Add(mLeftTex)
-		texRight = texRight.Add(mRightTex)
+		scanLeft = scanLeft.Add(stepLeft)
+		scanRight = scanRight.Add(stepRight)
 	}
 }
 
@@ -128,44 +115,31 @@ func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Text
 	if vRight.Pos.X < vLeft.Pos.X {
 		vLeft, vRight = vRight, vLeft
 	}
-	texTop, texLeft, texRight := vTop.TexPos, vLeft.TexPos, vRight.TexPos
-	pTop, pLeft, pRight := vTop.Pos, vLeft.Pos, vRight.Pos
 
-	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
-	// to increment x by as we iterate down the Y-axis.
-	mLeft := (pLeft.X - pTop.X) / (pLeft.Y - pTop.Y)
-	mRight := (pRight.X - pTop.X) / (pRight.Y - pTop.Y)
-
-	mLeftTex := texLeft.Sub(texTop).Scale(1 / (pLeft.Y - pTop.Y))
-	mRightTex := texRight.Sub(texTop).Scale(1 / (pRight.Y - pTop.Y))
+	stepLeft := vLeft.Sub(vTop).Scale(1 / (vLeft.Pos.Y - vTop.Pos.Y))
+	stepRight := vRight.Sub(vTop).Scale(1 / (vRight.Pos.Y - vTop.Pos.Y))
 
 	// Round half down to follow the top-left rule
-	yStart, yEnd := int(roundHalfDown(pTop.Y)), int(roundHalfDown(pLeft.Y))
+	yStart, yEnd := int(roundHalfDown(vTop.Pos.Y)), int(roundHalfDown(vLeft.Pos.Y))
 
 	// Add 0.5 because we want to use the midpoint of the pixel
-	scanLeft := mLeft*(float32(yStart)+0.5-pLeft.Y) + pLeft.X
-	scanRight := mRight*(float32(yStart)+0.5-pRight.Y) + pRight.X
-
-	texLeft = texLeft.Add(mLeftTex.Scale(float32(yStart) + 0.5 - pLeft.Y))
-	texRight = texRight.Add(mRightTex.Scale(float32(yStart) + 0.5 - pRight.Y))
+	scanLeft := vLeft.Add(stepLeft.Scale(float32(yStart) + 0.5 - vLeft.Pos.Y))
+	scanRight := vRight.Add(stepRight.Scale(float32(yStart) + 0.5 - vRight.Pos.Y))
 
 	for y := yStart; y < yEnd; y++ {
 		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(scanLeft)), int(roundHalfDown(scanRight))
+		xStart, xEnd := int(roundHalfDown(scanLeft.Pos.X)), int(roundHalfDown(scanRight.Pos.X))
 
-		mScanTex := texRight.Sub(texLeft).Scale(1 / (scanRight - scanLeft))
-		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft))
+		stepTex := scanRight.TexPos.Sub(scanLeft.TexPos).Scale(1 / (scanRight.Pos.X - scanLeft.Pos.X))
+		texCoord := scanLeft.TexPos.Add(stepTex.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
 			c.PutPixel(x, y, tex.shade(texCoord))
-			texCoord = texCoord.Add(mScanTex)
+			texCoord = texCoord.Add(stepTex)
 		}
 
-		scanLeft += mLeft
-		scanRight += mRight
-
-		texLeft = texLeft.Add(mLeftTex)
-		texRight = texRight.Add(mRightTex)
+		scanLeft = scanLeft.Add(stepLeft)
+		scanRight = scanRight.Add(stepRight)
 	}
 }
 
