@@ -150,27 +150,43 @@ func (c *Canvas) fillTriangleFlatBottom(pTop, pLeft, pRight geom.Vec2, clr color
 	if pRight.X < pLeft.X {
 		pLeft, pRight = pRight, pLeft
 	}
+	texLeft, texTop, texRight := defaultTexture.points[0], defaultTexture.points[1], defaultTexture.points[2]
 
 	// Calculate the dx/dy slope because x is the dependent variable; ie. how much
 	// to increment x by as we iterate down the Y-axis.
 	mLeft := (pLeft.X - pTop.X) / (pLeft.Y - pTop.Y)
 	mRight := (pRight.X - pTop.X) / (pRight.Y - pTop.Y)
 
+	mLeftTex := texLeft.Sub(texTop).Scale(1 / (pLeft.Y - pTop.Y))
+	mRightTex := texRight.Sub(texTop).Scale(1 / (pRight.Y - pTop.Y))
+
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(pTop.Y)), int(roundHalfDown(pLeft.Y))
+
+	// Add 0.5 because we want to use the midpoint of the pixel
+	scanLeft := mLeft*(float32(yStart)+0.5-pLeft.Y) + pLeft.X
+	scanRight := mRight*(float32(yStart)+0.5-pRight.Y) + pRight.X
+
+	texLeft = texLeft.Add(mLeftTex.Scale(float32(yStart) + 0.5 - pLeft.Y))
+	texRight = texRight.Add(mRightTex.Scale(float32(yStart) + 0.5 - pRight.Y))
+
 	for y := yStart; y < yEnd; y++ {
-		yF := float32(y)
-
-		// Add 0.5 because we want to use the midpoint of the pixel
-		xStartF := mLeft*(yF+0.5-pLeft.Y) + pLeft.X
-		xEndF := mRight*(yF+0.5-pRight.Y) + pRight.X
-
 		// Round half down to follow the top-left rule
-		xStart, xEnd := int(roundHalfDown(xStartF)), int(roundHalfDown(xEndF))
+		xStart, xEnd := int(roundHalfDown(scanLeft)), int(roundHalfDown(scanRight))
+
+		mScanTex := texRight.Sub(texLeft).Scale(1 / (scanRight - scanLeft))
+		texCoord := texLeft.Add(mScanTex.Scale(float32(xStart) + 0.5 - scanLeft))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, clr)
+			c.PutPixel(x, y, defaultTexture.shade(texCoord))
+			texCoord = texCoord.Add(mScanTex)
 		}
+
+		scanLeft += mLeft
+		scanRight += mRight
+
+		texLeft = texLeft.Add(mLeftTex)
+		texRight = texRight.Add(mRightTex)
 	}
 }
 
