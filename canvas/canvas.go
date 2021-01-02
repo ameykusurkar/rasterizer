@@ -84,8 +84,9 @@ func (c *Canvas) fillTriangleFlatTop(vLeft, vRight, vBottom TexVertex, tex *Text
 		vLeft, vRight = vRight, vLeft
 	}
 
-	stepLeft := vBottom.Sub(vLeft).Scale(1 / (vBottom.Pos.Y - vLeft.Pos.Y))
-	stepRight := vBottom.Sub(vRight).Scale(1 / (vBottom.Pos.Y - vRight.Pos.Y))
+	deltaY := vBottom.Pos.Y - vLeft.Pos.Y
+	stepLeft := vBottom.Sub(vLeft).Scale(1 / deltaY)
+	stepRight := vBottom.Sub(vRight).Scale(1 / deltaY)
 
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(vLeft.Pos.Y)), int(roundHalfDown(vBottom.Pos.Y))
@@ -98,8 +99,9 @@ func (c *Canvas) fillTriangleFlatBottom(vTop, vLeft, vRight TexVertex, tex *Text
 		vLeft, vRight = vRight, vLeft
 	}
 
-	stepLeft := vLeft.Sub(vTop).Scale(1 / (vLeft.Pos.Y - vTop.Pos.Y))
-	stepRight := vRight.Sub(vTop).Scale(1 / (vRight.Pos.Y - vTop.Pos.Y))
+	deltaY := vLeft.Pos.Y - vTop.Pos.Y
+	stepLeft := vLeft.Sub(vTop).Scale(1 / deltaY)
+	stepRight := vRight.Sub(vTop).Scale(1 / deltaY)
 
 	// Round half down to follow the top-left rule
 	yStart, yEnd := int(roundHalfDown(vTop.Pos.Y)), int(roundHalfDown(vLeft.Pos.Y))
@@ -119,12 +121,13 @@ func (c *Canvas) fillTriangleFlat(
 		// Round half down to follow the top-left rule
 		xStart, xEnd := int(roundHalfDown(scanLeft.Pos.X)), int(roundHalfDown(scanRight.Pos.X))
 
-		stepTex := scanRight.TexPos.Sub(scanLeft.TexPos).Scale(1 / (scanRight.Pos.X - scanLeft.Pos.X))
-		texCoord := scanLeft.TexPos.Add(stepTex.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
+		deltaX := scanRight.Pos.X - scanLeft.Pos.X
+		step := scanRight.Sub(scanLeft).Scale(1 / deltaX)
+		scanCoord := scanLeft.Add(step.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, tex.shade(texCoord))
-			texCoord = texCoord.Add(stepTex)
+			c.PutPixel(x, y, tex.shade(scanCoord))
+			scanCoord = scanCoord.Add(step)
 		}
 
 		scanLeft = scanLeft.Add(stepLeft)

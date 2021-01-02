@@ -12,15 +12,15 @@ type Texture struct {
 	Img image.Image
 }
 
-func (tex *Texture) shade(texCoord geom.Vec2) color.Color {
+func (tex *Texture) shade(v TexVertex) color.Color {
 	max := tex.Img.Bounds().Max
 
-	scaledX := int(texCoord.X * float32(max.X))
+	scaledX := int(v.TexPos.X * float32(max.X))
 	if scaledX > max.X-1 {
 		scaledX = max.X - 1
 	}
 
-	scaledY := int(texCoord.Y * float32(max.Y))
+	scaledY := int(v.TexPos.Y * float32(max.Y))
 	if scaledY > max.Y-1 {
 		scaledY = max.Y - 1
 	}
