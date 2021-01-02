@@ -97,16 +97,9 @@ func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
 	case vMid.Pos.Y == vBottom.Pos.Y:
 		c.fillTriangleFlatBottom(vTop, vMid, vBottom, tex)
 	default:
-		mSplit := (vBottom.Pos.X - vTop.Pos.X) / (vBottom.Pos.Y - vTop.Pos.Y)
-		pSplit := geom.Vec2{
-			X: mSplit*(vMid.Pos.Y-vTop.Pos.Y) + vTop.Pos.X,
-			Y: vMid.Pos.Y,
-		}
-
 		alpha := (vMid.Pos.Y - vTop.Pos.Y) / (vBottom.Pos.Y - vTop.Pos.Y)
-
 		vSplit := TexVertex{
-			Pos:    pSplit,
+			Pos:    geom.Interpolate2D(vTop.Pos, vBottom.Pos, alpha),
 			TexPos: geom.Interpolate2D(vTop.TexPos, vBottom.TexPos, alpha),
 		}
 
