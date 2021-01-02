@@ -16,9 +16,9 @@ type Pipeline struct {
 var defaultTexture canvas.Texture = canvas.Texture{
 	Points: []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}},
 	Colors: []geom.Vec3{
-    {X: 0, Y: 255, Z: 0},
-    {X: 0, Y: 0, Z: 255},
-  },
+		{X: 0, Y: 255, Z: 0},
+		{X: 0, Y: 0, Z: 255},
+	},
 }
 
 // Draw renders the given triangles onto the screen.
@@ -35,9 +35,9 @@ func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList) {
 		}
 
 		p.canv.FillTriangle(
-      canvas.TexVertex{Pos: tri2D[0], TexPos: defaultTexture.Points[0]},
-      canvas.TexVertex{Pos: tri2D[1], TexPos: defaultTexture.Points[1]},
-      canvas.TexVertex{Pos: tri2D[2], TexPos: defaultTexture.Points[2]},
+			canvas.TexVertex{Pos: tri2D[0], TexPos: defaultTexture.Points[0]},
+			canvas.TexVertex{Pos: tri2D[1], TexPos: defaultTexture.Points[1]},
+			canvas.TexVertex{Pos: tri2D[2], TexPos: defaultTexture.Points[2]},
 			&defaultTexture,
 		)
 		p.canv.DrawLine(tri2D[0], tri2D[1], white)

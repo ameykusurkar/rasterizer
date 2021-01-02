@@ -45,8 +45,3 @@ func (v Vec3) Cross(u Vec3) Vec3 {
 		Z: v.X*u.Y - v.Y*u.X,
 	}
 }
-
-// Interpolate3D returns the interpolation vectors u and v.
-func Interpolate3D(u, v Vec3, alpha float32) Vec3 {
-  return v.Sub(u).Scale(alpha).Add(u)
-}

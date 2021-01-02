@@ -70,8 +70,8 @@ func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
 	default:
 		alpha := (vMid.Pos.Y - vTop.Pos.Y) / (vBottom.Pos.Y - vTop.Pos.Y)
 		vSplit := TexVertex{
-			Pos:    geom.Interpolate2D(vTop.Pos, vBottom.Pos, alpha),
-			TexPos: geom.Interpolate2D(vTop.TexPos, vBottom.TexPos, alpha),
+			Pos:    vTop.Pos.InterpolateTo(vBottom.Pos, alpha),
+			TexPos: vTop.TexPos.InterpolateTo(vBottom.TexPos, alpha),
 		}
 
 		c.fillTriangleFlatBottom(vTop, vMid, vSplit, tex)
