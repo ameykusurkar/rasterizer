@@ -69,13 +69,6 @@ func (c *Canvas) PutPixel(x, y int, color color.Color) {
 	c.image.Set(x, y, color)
 }
 
-// DrawLine draws a line with a specified color between two points.
-func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
-	for _, vert := range interpolate(p0, p1) {
-		c.PutPixel(int(vert.X), int(vert.Y), clr)
-	}
-}
-
 // FillTriangle fills the triangle formed by the given three points with the
 // specified color, using the top-left rule.
 func (c *Canvas) FillTriangle(v0, v1, v2 TexVertex, tex *Texture) {
@@ -203,59 +196,10 @@ func roundHalfDown(x float32) float32 {
 	return float32(math.Ceil(float64(x) - 0.5))
 }
 
-// ShadeTriangle shades the triangle formed by the given three points with the specified color, with a gradient.
-// TODO: This uses an old algorithm and needs to be updated.
-func (c *Canvas) ShadeTriangle(p0, p1, p2 geom.Vec2, clr color.RGBA) {
-	if p1.Y < p0.Y {
-		p0, p1 = p1, p0
-	}
-	if p2.Y < p0.Y {
-		p0, p2 = p2, p0
-	}
-	if p2.Y < p1.Y {
-		p1, p2 = p2, p1
-	}
-
-	h0, h1, h2 := float32(0.0), float32(0.5), float32(1.0)
-
-	x01 := interpolateVertical(p0, p1)
-	h01 := interpolateVertical(geom.Vec2{X: h0, Y: p0.Y}, geom.Vec2{X: h1, Y: p1.Y})
-	x01 = x01[:len(x01)-1] // Last value overlaps with x12
-	h01 = h01[:len(h01)-1] // Last value overlaps with h12
-
-	x12 := interpolateVertical(p1, p2)
-	h12 := interpolateVertical(geom.Vec2{X: h1, Y: p1.Y}, geom.Vec2{X: h2, Y: p2.Y})
-
-	x02 := interpolateVertical(p0, p2)
-	h02 := interpolateVertical(geom.Vec2{X: h0, Y: p0.Y}, geom.Vec2{X: h2, Y: p2.Y})
-
-	x012 := append(x01, x12...)
-	h012 := append(h01, h12...)
-
-	var xLefts, xRights []geom.Vec2
-	var hLefts, hRights []geom.Vec2
-	if x01[len(x01)-1].X < x02[len(x01)-1].X {
-		xLefts, xRights = x012, x02
-		hLefts, hRights = h012, h02
-	} else {
-		xLefts, xRights = x02, x012
-		hLefts, hRights = h02, h012
-	}
-
-	for i := 0; i < len(x02); i++ {
-		xLeft, xRight := xLefts[i].X, xRights[i].X
-		hLeft, hRight := hLefts[i].X, hRights[i].X
-		hh := interpolateHorizontal(geom.Vec2{X: xLeft, Y: hLeft}, geom.Vec2{X: xRight, Y: hRight})
-		for x := xLeft; x <= xRight; x++ {
-			hGrad := hh[int(x-xLeft)].Y
-			gradColor := color.RGBA{
-				R: uint8(hGrad * float32(clr.R)),
-				G: uint8(hGrad * float32(clr.G)),
-				B: uint8(hGrad * float32(clr.B)),
-				A: 0xFF,
-			}
-			c.PutPixel(int(x), int(xLefts[i].Y), gradColor)
-		}
+// DrawLine draws a line with a specified color between two points.
+func (c *Canvas) DrawLine(p0, p1 geom.Vec2, clr color.Color) {
+	for _, vert := range interpolate(p0, p1) {
+		c.PutPixel(int(vert.X), int(vert.Y), clr)
 	}
 }
 
