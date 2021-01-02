@@ -13,16 +13,10 @@ type Pipeline struct {
 	rotationCenter geom.Vec3
 }
 
-var defaultTexture canvas.Texture = canvas.Texture{
-	Points: []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}},
-	Colors: []geom.Vec3{
-		{X: 0, Y: 255, Z: 0},
-		{X: 0, Y: 0, Z: 255},
-	},
-}
+var texPoints = []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}}
 
 // Draw renders the given triangles onto the screen.
-func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList) {
+func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList, tex *canvas.Texture) {
 	vertices := p.transformVertices(triangleList.Vertices)
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
@@ -35,10 +29,10 @@ func (p *Pipeline) Draw(triangleList *geom.IndexedTriangleList) {
 		}
 
 		p.canv.FillTriangle(
-			canvas.TexVertex{Pos: tri2D[0], TexPos: defaultTexture.Points[0]},
-			canvas.TexVertex{Pos: tri2D[1], TexPos: defaultTexture.Points[1]},
-			canvas.TexVertex{Pos: tri2D[2], TexPos: defaultTexture.Points[2]},
-			&defaultTexture,
+			canvas.TexVertex{Pos: tri2D[0], TexPos: texPoints[0]},
+			canvas.TexVertex{Pos: tri2D[1], TexPos: texPoints[1]},
+			canvas.TexVertex{Pos: tri2D[2], TexPos: texPoints[2]},
+			tex,
 		)
 		p.canv.DrawLine(tri2D[0], tri2D[1], white)
 		p.canv.DrawLine(tri2D[1], tri2D[2], white)

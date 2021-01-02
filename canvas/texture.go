@@ -1,6 +1,7 @@
 package canvas
 
 import (
+	"image"
 	"image/color"
 
 	geom "rasterizer/geometry"
@@ -8,13 +9,23 @@ import (
 
 // Texture is a thing, exactly what it is TBD.
 type Texture struct {
-	Points []geom.Vec2
-	Colors []geom.Vec3
+	Img image.Image
 }
 
 func (tex *Texture) shade(texCoord geom.Vec2) color.Color {
-	colorVec := tex.Colors[0].Scale(texCoord.X).Add(tex.Colors[1].Scale(texCoord.Y))
-	return color.RGBA{uint8(colorVec.X), uint8(colorVec.Y), uint8(colorVec.Z), 255}
+	max := tex.Img.Bounds().Max
+
+	scaledX := int(texCoord.X * float32(max.X))
+	if scaledX > max.X-1 {
+		scaledX = max.X - 1
+	}
+
+	scaledY := int(texCoord.Y * float32(max.Y))
+	if scaledY > max.Y-1 {
+		scaledY = max.Y - 1
+	}
+
+	return tex.Img.At(scaledX, scaledY)
 }
 
 // TexVertex contains a vertex's position both on a two-dimensional surface (eg. a Canvas),

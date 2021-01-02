@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/color"
+	_ "image/png"
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -32,12 +35,19 @@ type game struct {
 	thetaX   float32
 	thetaY   float32
 	thetaZ   float32
+	tex      canvas.Texture
 }
 
 func main() {
 	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetWindowTitle("Rasterizer")
 	ebiten.SetMaxTPS(60)
+
+	img, err := imageFromPath("insta.png")
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cube := *buildCube()
 	g := game{
@@ -46,12 +56,23 @@ func main() {
 			rotation:       *geom.RotationZ(0),
 			rotationCenter: cube.Vertices[0].Add(cube.Vertices[6]).Scale(0.5),
 		},
+		tex:  canvas.Texture{Img: img},
 		cube: cube,
 	}
 
 	if err := ebiten.RunGame(&g); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func imageFromPath(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	image, _, err := image.Decode(f)
+	return image, err
 }
 
 func buildCube() *geom.IndexedTriangleList {
@@ -133,7 +154,7 @@ func (g *game) Update() error {
 
 func (g *game) Draw(screen *ebiten.Image) {
 	g.pipeline.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
-	g.pipeline.Draw(&g.cube)
+	g.pipeline.Draw(&g.cube, &g.tex)
 	screen.ReplacePixels(g.pipeline.canv.Buffer())
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.CurrentTPS()))
 }
