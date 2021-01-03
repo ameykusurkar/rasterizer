@@ -54,7 +54,7 @@ func main() {
 		pipeline: Pipeline{
 			canv:           *canvas.NewCanvas(screenWidth, screenHeight),
 			rotation:       *geom.RotationZ(0),
-			rotationCenter: cube.Vertices[0].Add(cube.Vertices[6]).Scale(0.5),
+			rotationCenter: cube.Vertices[0].Pos.Add(cube.Vertices[6].Pos).Scale(0.5),
 		},
 		tex:  canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
 		cube: cube,
@@ -87,25 +87,15 @@ func buildCube() *canvas.IndexedTriangleList {
 		 *      |/       |/
 		 *      3--------2
 		 */
-		Vertices: []geom.Vec3{
-			{X: -1, Y: 1, Z: 2},
-			{X: 1, Y: 1, Z: 2},
-			{X: 1, Y: -1, Z: 2},
-			{X: -1, Y: -1, Z: 2},
-			{X: -1, Y: 1, Z: 4},
-			{X: 1, Y: 1, Z: 4},
-			{X: 1, Y: -1, Z: 4},
-			{X: -1, Y: -1, Z: 4},
-		},
-		TextureVertices: []geom.Vec2{
-			{X: 0, Y: 0},
-			{X: 1, Y: 0},
-			{X: 1, Y: 1},
-			{X: 0, Y: 1},
-			{X: 0, Y: 0},
-			{X: 1, Y: 0},
-			{X: 1, Y: 1},
-			{X: 0, Y: 1},
+		Vertices: []canvas.TexVertex{
+			{Pos: geom.Vec3{X: -1, Y: 1, Z: 2}, TexPos: geom.Vec2{X: 0, Y: 0}},
+			{Pos: geom.Vec3{X: 1, Y: 1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 0}},
+			{Pos: geom.Vec3{X: 1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 1}},
+			{Pos: geom.Vec3{X: -1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 0, Y: 1}},
+			{Pos: geom.Vec3{X: -1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 0}},
+			{Pos: geom.Vec3{X: 1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 0}},
+			{Pos: geom.Vec3{X: 1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 1}},
+			{Pos: geom.Vec3{X: -1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 1}},
 		},
 		Indices: []int{
 			// Front

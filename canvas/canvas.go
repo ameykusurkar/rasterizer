@@ -10,9 +10,8 @@ import (
 
 // IndexedTriangleList represents shapes using triangles.
 type IndexedTriangleList struct {
-	Vertices        []geom.Vec3
-	TextureVertices []geom.Vec2
-	Indices         []int
+	Vertices []TexVertex
+	Indices  []int
 }
 
 // Canvas is a buffer on which we can draw lines, triangles etc.
