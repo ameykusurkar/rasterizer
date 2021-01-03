@@ -92,10 +92,10 @@ func buildCube() *canvas.IndexedTriangleList {
 			{Pos: geom.Vec3{X: 1, Y: 1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 0}},
 			{Pos: geom.Vec3{X: 1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 1}},
 			{Pos: geom.Vec3{X: -1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 0, Y: 1}},
-			{Pos: geom.Vec3{X: -1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 0}},
-			{Pos: geom.Vec3{X: 1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 0}},
-			{Pos: geom.Vec3{X: 1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 1}},
-			{Pos: geom.Vec3{X: -1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 1}},
+			{Pos: geom.Vec3{X: -1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 1}},
+			{Pos: geom.Vec3{X: 1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 1}},
+			{Pos: geom.Vec3{X: 1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 0}},
+			{Pos: geom.Vec3{X: -1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 0}},
 		},
 		Indices: []int{
 			// Front

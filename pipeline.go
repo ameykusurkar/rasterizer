@@ -21,18 +21,13 @@ func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Tex
 
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
-	// white := color.RGBA{255, 255, 255, 255}
 	for _, tri3D := range triangles3D {
-		tri := [3]canvas.TexVertex{
+		p.canv.FillTriangle(
 			p.transformPerspective(tri3D[0]),
 			p.transformPerspective(tri3D[1]),
 			p.transformPerspective(tri3D[2]),
-		}
-
-		p.canv.FillTriangle(tri[0], tri[1], tri[2], tex)
-		// p.canv.DrawLine(tri2D[0], tri2D[1], white)
-		// p.canv.DrawLine(tri2D[1], tri2D[2], white)
-		// p.canv.DrawLine(tri2D[2], tri2D[0], white)
+			tex,
+		)
 	}
 }
 
@@ -88,10 +83,19 @@ func triangleFacingAway(v0, v1, v2 geom.Vec3) bool {
 // be drawn on a canvas.
 func (p *Pipeline) transformPerspective(vertex canvas.TexVertex) canvas.TexVertex {
 	w, h := p.canv.Dimensions()
-	projected := geom.Project(vertex.Pos, 1)
+	zInv := 1 / vertex.Pos.Z
+
+	// We also want to transform the texture coordinates so that perspective is
+	// applied correctly to the texture. We will re-multiply the texture coordinates
+	// by the Z component before drawing the pixel.
+	projected := vertex.Scale(zInv)
+
+	// Since the canvas is 2D, we use the Z component to store depth information.
+	// We store 1/Z so that interpolation preserves depth perspective correctly.
+	projected.Pos.Z = zInv
 	return canvas.TexVertex{
-		Pos:    vertexToPoint(projected, w, h),
-		TexPos: vertex.TexPos,
+		Pos:    vertexToPoint(projected.Pos, w, h),
+		TexPos: projected.TexPos,
 	}
 }
 

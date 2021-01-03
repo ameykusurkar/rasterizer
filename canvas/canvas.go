@@ -129,7 +129,11 @@ func (c *Canvas) fillTriangleFlat(
 		scanCoord := scanLeft.Add(step.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, tex.shade(scanCoord))
+			depth := 1 / scanCoord.Pos.Z
+			// We stored 1/Z in the Z-component so that interpolation will preserve
+			// depth perspective. We need to undo the multiplication to get the original
+			// texture coordinates.
+			c.PutPixel(x, y, tex.shade(scanCoord.Scale(depth)))
 			scanCoord = scanCoord.Add(step)
 		}
 
