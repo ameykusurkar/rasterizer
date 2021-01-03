@@ -22,23 +22,23 @@ func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Tex
 	// TODO: Find a cleaner way of passing around the texture vertices
 	triangles3D, triangles3DIndices := assembleTriangles(vertices, triangleList.Indices)
 
-	white := color.RGBA{255, 255, 255, 255}
+	// white := color.RGBA{255, 255, 255, 255}
 	for i, tri3D := range triangles3D {
-		tri2D := [3]geom.Vec2{
+		tri := [3]geom.Vec3{
 			p.transformPerspective(tri3D[0]),
 			p.transformPerspective(tri3D[1]),
 			p.transformPerspective(tri3D[2]),
 		}
 
 		p.canv.FillTriangle(
-			canvas.TexVertex{Pos: tri2D[0], TexPos: triangleList.TextureVertices[triangles3DIndices[i][0]]},
-			canvas.TexVertex{Pos: tri2D[1], TexPos: triangleList.TextureVertices[triangles3DIndices[i][1]]},
-			canvas.TexVertex{Pos: tri2D[2], TexPos: triangleList.TextureVertices[triangles3DIndices[i][2]]},
+			canvas.TexVertex{Pos: tri[0], TexPos: triangleList.TextureVertices[triangles3DIndices[i][0]]},
+			canvas.TexVertex{Pos: tri[1], TexPos: triangleList.TextureVertices[triangles3DIndices[i][1]]},
+			canvas.TexVertex{Pos: tri[2], TexPos: triangleList.TextureVertices[triangles3DIndices[i][2]]},
 			tex,
 		)
-		p.canv.DrawLine(tri2D[0], tri2D[1], white)
-		p.canv.DrawLine(tri2D[1], tri2D[2], white)
-		p.canv.DrawLine(tri2D[2], tri2D[0], white)
+		// p.canv.DrawLine(tri2D[0], tri2D[1], white)
+		// p.canv.DrawLine(tri2D[1], tri2D[2], white)
+		// p.canv.DrawLine(tri2D[2], tri2D[0], white)
 	}
 }
 
@@ -87,15 +87,15 @@ func assembleTriangles(vertices []geom.Vec3, indices []int) ([][3]geom.Vec3, [][
 
 // Transforms the 3D scene to a 2D scene by applying perspective, that can then
 // be drawn on a canvas.
-func (p *Pipeline) transformPerspective(vertex geom.Vec3) geom.Vec2 {
+func (p *Pipeline) transformPerspective(vertex geom.Vec3) geom.Vec3 {
 	w, h := p.canv.Dimensions()
 	projected := geom.Project(vertex, 1)
 	return vertexToPoint(projected, w, h)
 }
 
-func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec2 {
+func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec3 {
 	halfWidth, halfHeight := float32(width)/2, float32(height)/2
 	x := (1 + v.X) * halfWidth
 	y := (1 - v.Y) * halfHeight
-	return geom.Vec2{X: float32(int(x)), Y: float32(int(y))}
+	return geom.Vec3{X: float32(int(x)), Y: float32(int(y)), Z: v.Z}
 }
