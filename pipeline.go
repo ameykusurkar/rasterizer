@@ -95,7 +95,9 @@ func (p *Pipeline) transformPerspective(vertex geom.Vec3) geom.Vec3 {
 
 func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec3 {
 	halfWidth, halfHeight := float32(width)/2, float32(height)/2
-	x := (1 + v.X) * halfWidth
-	y := (1 - v.Y) * halfHeight
-	return geom.Vec3{X: float32(int(x)), Y: float32(int(y)), Z: v.Z}
+	return geom.Vec3{
+		X: (1 + v.X) * halfWidth,
+		Y: (1 - v.Y) * halfHeight,
+		Z: v.Z,
+	}
 }
