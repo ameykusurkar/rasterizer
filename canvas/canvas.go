@@ -10,9 +10,8 @@ import (
 
 // IndexedTriangleList represents shapes using triangles.
 type IndexedTriangleList struct {
-	Vertices        []geom.Vec3
-	TextureVertices []geom.Vec2
-	Indices         []int
+	Vertices []TexVertex
+	Indices  []int
 }
 
 // Canvas is a buffer on which we can draw lines, triangles etc.
@@ -130,7 +129,8 @@ func (c *Canvas) fillTriangleFlat(
 		scanCoord := scanLeft.Add(step.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
-			c.PutPixel(x, y, tex.shade(scanCoord))
+			depth := scanCoord.Pos.Z
+			c.PutPixel(x, y, tex.shade(scanCoord.Scale(depth)))
 			scanCoord = scanCoord.Add(step)
 		}
 
