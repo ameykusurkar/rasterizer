@@ -62,14 +62,9 @@ func assembleTriangles(vertices []canvas.TexVertex, indices []int) [][3]canvas.T
 
 	for i := 0; i < len(indices); i += 3 {
 		idx0, idx1, idx2 := indices[i], indices[i+1], indices[i+2]
-
 		v0, v1, v2 := vertices[idx0], vertices[idx1], vertices[idx2]
-		// Assumes that the triangle's vertices are defined in clockwise order
-		normal := v1.Pos.Sub(v0.Pos).Cross(v2.Pos.Sub(v0.Pos))
-		if normal.Dot(v0.Pos) > 0 {
-			// A positive dot-product indicates that the viewing vector is in the same
-			// direcion as the triangle's normal. This means that we are looking at the
-			// back-face of triangle, which should not be visible.
+
+		if triangleFacingAway(v0.Pos, v1.Pos, v2.Pos) {
 			continue
 		}
 
@@ -77,6 +72,16 @@ func assembleTriangles(vertices []canvas.TexVertex, indices []int) [][3]canvas.T
 	}
 
 	return triangles
+}
+
+func triangleFacingAway(v0, v1, v2 geom.Vec3) bool {
+	// Assumes that the triangle's vertices are defined in clockwise order
+	normal := v1.Sub(v0).Cross(v2.Sub(v0))
+
+	// A positive dot-product indicates that the viewing vector is in the same
+	// direcion as the triangle's normal. This means that we are looking at the
+	// back-face of triangle, which should not be visible.
+	return normal.Dot(v0) > 0
 }
 
 // Transforms the 3D scene to a 2D scene by applying perspective, that can then
