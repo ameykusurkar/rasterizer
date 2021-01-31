@@ -31,7 +31,7 @@ var colors = []color.RGBA{
 
 type game struct {
 	pipeline Pipeline
-	cube     canvas.IndexedTriangleList
+	cubes    []canvas.IndexedTriangleList
 	tex      canvas.ImageTextureWrapped
 	thetaX   float32
 	thetaY   float32
@@ -49,15 +49,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cube := *buildCube()
+	cubes := make([]canvas.IndexedTriangleList, 0)
+	cubes = append(cubes, *buildCube(geom.Vec3{X: -0.5, Y: 1, Z: 4}, 2.0))
+	cubes = append(cubes, *buildCube(geom.Vec3{X: 0.5, Y: 0, Z: 5}, 3.5))
+
 	g := game{
 		pipeline: Pipeline{
-			canv:           *canvas.NewCanvas(screenWidth, screenHeight),
-			rotation:       *geom.RotationZ(0),
-			rotationCenter: cube.Vertices[0].Pos.Add(cube.Vertices[6].Pos).Scale(0.5),
+			canv:     *canvas.NewCanvas(screenWidth, screenHeight),
+			rotation: *geom.RotationZ(0),
+			// TODO: Per-cube rotation centers
+			rotationCenter: cubes[0].Vertices[0].Pos.Add(cubes[0].Vertices[6].Pos).Scale(0.5),
 		},
-		tex:  canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
-		cube: cube,
+		tex:   canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
+		cubes: cubes,
 	}
 
 	if err := ebiten.RunGame(&g); err != nil {
@@ -75,27 +79,51 @@ func imageFromPath(path string) (image.Image, error) {
 	return image, err
 }
 
-func buildCube() *canvas.IndexedTriangleList {
+func buildCube(center geom.Vec3, length float32) *canvas.IndexedTriangleList {
+	/*  Orientation of vertices
+	 *         4--------5
+	 *        /|       /|
+	 *       / |      / |
+	 *      0--------1  |
+	 *      |  7-----|--6
+	 *      | /      | /
+	 *      |/       |/
+	 *      3--------2
+	 */
 	return &canvas.IndexedTriangleList{
-		/*  Orientation of vertices
-		 *         4--------5
-		 *        /|       /|
-		 *       / |      / |
-		 *      0--------1  |
-		 *      |  7-----|--6
-		 *      | /      | /
-		 *      |/       |/
-		 *      3--------2
-		 */
 		Vertices: []canvas.TexVertex{
-			{Pos: geom.Vec3{X: -1, Y: 1, Z: 2}, TexPos: geom.Vec2{X: 0, Y: 0}},
-			{Pos: geom.Vec3{X: 1, Y: 1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 0}},
-			{Pos: geom.Vec3{X: 1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 1, Y: 1}},
-			{Pos: geom.Vec3{X: -1, Y: -1, Z: 2}, TexPos: geom.Vec2{X: 0, Y: 1}},
-			{Pos: geom.Vec3{X: -1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 1}},
-			{Pos: geom.Vec3{X: 1, Y: 1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 1}},
-			{Pos: geom.Vec3{X: 1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 1, Y: 0}},
-			{Pos: geom.Vec3{X: -1, Y: -1, Z: 4}, TexPos: geom.Vec2{X: 0, Y: 0}},
+			{
+				Pos:    center.Add(geom.Vec3{X: -1, Y: 1, Z: -1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 0, Y: 0},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: 1, Y: 1, Z: -1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 1, Y: 0},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: 1, Y: -1, Z: -1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 1, Y: 1},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: -1, Y: -1, Z: -1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 0, Y: 1},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: -1, Y: 1, Z: 1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 0, Y: 1},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: 1, Y: 1, Z: 1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 1, Y: 1},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: 1, Y: -1, Z: 1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 1, Y: 0},
+			},
+			{
+				Pos:    center.Add(geom.Vec3{X: -1, Y: -1, Z: 1}).Scale(length / 2),
+				TexPos: geom.Vec2{X: 0, Y: 0},
+			},
 		},
 		Indices: []int{
 			// Front
@@ -153,8 +181,12 @@ func (g *game) Update() error {
 }
 
 func (g *game) Draw(screen *ebiten.Image) {
-	g.pipeline.canv.Fill(color.RGBA{0, 0, 0, 0xFF})
-	g.pipeline.Draw(&g.cube, &g.tex)
+	g.pipeline.canv.Clear()
+
+	for _, cube := range g.cubes {
+		g.pipeline.Draw(&cube, &g.tex)
+	}
+
 	screen.ReplacePixels(g.pipeline.canv.Buffer())
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.CurrentTPS()))
 }

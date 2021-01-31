@@ -16,13 +16,16 @@ type IndexedTriangleList struct {
 
 // Canvas is a buffer on which we can draw lines, triangles etc.
 type Canvas struct {
-	image *image.RGBA
+	image       *image.RGBA
+	depthBuffer [][]float32
 }
 
 // NewCanvas returns a new Canvas with dimensions (width, height).
 func NewCanvas(width, height int) *Canvas {
 	return &Canvas{
 		image: image.NewRGBA(image.Rect(0, 0, width, height)),
+		// Default depth is positive infinity
+		depthBuffer: make2dBuffer(width, height, float32(math.Inf(1))),
 	}
 }
 
@@ -37,20 +40,34 @@ func (c *Canvas) Buffer() []uint8 {
 	return c.image.Pix
 }
 
-// Fill sets all the pixels on the Canvas to the specified color.
-func (c *Canvas) Fill(clr color.Color) error {
+// Clear resets all the canvas pixels and depth buffer.
+func (c *Canvas) Clear() {
 	bounds := c.image.Bounds()
 	for i := 0; i < bounds.Max.X; i++ {
 		for j := 0; j < bounds.Max.Y; j++ {
-			c.image.Set(i, j, clr)
+			c.PutPixel(i, j, color.RGBA{0, 0, 0, 0xFF})
+			c.depthBuffer[j][i] = float32(math.Inf(1))
 		}
 	}
-	return nil
 }
 
 // PutPixel puts at pixel at (x, y) on the Canvas, with (0, 0) as the top-left corner.
 func (c *Canvas) PutPixel(x, y int, color color.Color) {
 	c.image.Set(x, y, color)
+}
+
+// TestAndSet sets the depth value at (x, y) if it is smallest than the existing,
+// and returns whether the depth was set.
+func (c *Canvas) TestAndSet(x, y int, depth float32) bool {
+	if point := (image.Point{X: x, Y: y}); !point.In(c.image.Bounds()) {
+		return false
+	}
+
+	if depth < c.depthBuffer[y][x] {
+		c.depthBuffer[y][x] = depth
+		return true
+	}
+	return false
 }
 
 // FillTriangle fills the triangle formed by the given three points with the
@@ -129,11 +146,16 @@ func (c *Canvas) fillTriangleFlat(
 		scanCoord := scanLeft.Add(step.Scale(float32(xStart) + 0.5 - scanLeft.Pos.X))
 
 		for x := xStart; x < xEnd; x++ {
-			depth := 1 / scanCoord.Pos.Z
 			// We stored 1/Z in the Z-component so that interpolation will preserve
 			// depth perspective. We need to undo the multiplication to get the original
 			// texture coordinates.
-			c.PutPixel(x, y, tex.shade(scanCoord.Scale(depth)))
+			depth := 1 / scanCoord.Pos.Z
+
+			// We test the pixel to be drawn against the depth buffer; we only want to draw it
+			// if it will be on top of anything already present.
+			if c.TestAndSet(x, y, depth) {
+				c.PutPixel(x, y, tex.shade(scanCoord.Scale(depth)))
+			}
 			scanCoord = scanCoord.Add(step)
 		}
 
@@ -190,4 +212,15 @@ func interpolateVertical(p0, p1 geom.Vec2) []geom.Vec2 {
 		x += a
 	}
 	return verts
+}
+
+func make2dBuffer(width, height int, val float32) [][]float32 {
+	buffer := make([][]float32, height)
+	for j := 0; j < len(buffer); j++ {
+		buffer[j] = make([]float32, width)
+		for i := 0; i < len(buffer); i++ {
+			buffer[j][i] = val
+		}
+	}
+	return buffer
 }
