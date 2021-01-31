@@ -61,8 +61,9 @@ func main() {
 
 	g := game{
 		pipeline: Pipeline{
-			canv:         *canvas.NewCanvas(screenWidth, screenHeight),
-			vertexShader: vertexShader,
+			canv:           *canvas.NewCanvas(screenWidth, screenHeight),
+			vertexShader:   vertexShader,
+			geometryShader: &CubeShader{},
 		},
 		vertexShader: vertexShader,
 		tex:          canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
@@ -198,4 +199,31 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return g.pipeline.canv.Dimensions()
+}
+
+// CubeShader tells you how to shade cubes.
+type CubeShader struct{}
+
+var topTriangle = []geom.Vec2{
+	{X: 0, Y: 1},
+	{X: 0, Y: 0},
+	{X: 1, Y: 0},
+}
+
+var bottomTriangle = []geom.Vec2{
+	{X: 0, Y: 1},
+	{X: 1, Y: 0},
+	{X: 1, Y: 1},
+}
+
+// Process returns the given vertices.
+func (s *CubeShader) Process(vertices []canvas.TexVertex, index int) []canvas.TexVertex {
+	for i := 0; i < len(vertices); i++ {
+		if index%2 == 0 {
+			vertices[i].TexPos = topTriangle[i]
+		} else {
+			vertices[i].TexPos = bottomTriangle[i]
+		}
+	}
+	return vertices
 }
