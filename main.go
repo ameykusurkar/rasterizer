@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -33,7 +34,7 @@ type game struct {
 	pipeline     Pipeline
 	cubes        []canvas.IndexedTriangleList
 	tex          canvas.ImageTextureWrapped
-	vertexShader *DefaultVertexShader
+	vertexShader *VertexRotator
 	thetaX       float32
 	thetaY       float32
 	thetaZ       float32
@@ -44,7 +45,11 @@ func main() {
 	ebiten.SetWindowTitle("Rasterizer")
 	ebiten.SetMaxTPS(60)
 
-	img, err := imageFromPath("insta.png")
+	if len(os.Args) < 2 {
+		log.Fatal(errors.New("Please provide an image for texture"))
+	}
+
+	img, err := imageFromPath(os.Args[1])
 
 	if err != nil {
 		log.Fatal(err)
@@ -54,9 +59,9 @@ func main() {
 	cubes = append(cubes, *buildCube(geom.Vec3{X: -0.5, Y: 1, Z: 4}, 2.0))
 	cubes = append(cubes, *buildCube(geom.Vec3{X: 0.5, Y: 0, Z: 5}, 3.5))
 
-	vertexShader := &DefaultVertexShader{
+	vertexShader := &VertexRotator{
 		rotation:       *geom.RotationZ(0),
-		rotationCenter: cubes[0].Vertices[0].Pos.Add(cubes[0].Vertices[6].Pos).Scale(0.5),
+		rotationCenter: cubes[0].Vertices[0].Add(cubes[0].Vertices[6]).Scale(0.5),
 	}
 
 	g := game{
@@ -86,51 +91,27 @@ func imageFromPath(path string) (image.Image, error) {
 }
 
 func buildCube(center geom.Vec3, length float32) *canvas.IndexedTriangleList {
-	/*  Orientation of vertices
-	 *         4--------5
-	 *        /|       /|
-	 *       / |      / |
-	 *      0--------1  |
-	 *      |  7-----|--6
-	 *      | /      | /
-	 *      |/       |/
-	 *      3--------2
-	 */
 	return &canvas.IndexedTriangleList{
-		Vertices: []canvas.TexVertex{
-			{
-				Pos:    center.Add(geom.Vec3{X: -1, Y: 1, Z: -1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 0, Y: 0},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: 1, Y: 1, Z: -1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 1, Y: 0},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: 1, Y: -1, Z: -1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 1, Y: 1},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: -1, Y: -1, Z: -1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 0, Y: 1},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: -1, Y: 1, Z: 1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 0, Y: 1},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: 1, Y: 1, Z: 1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 1, Y: 1},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: 1, Y: -1, Z: 1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 1, Y: 0},
-			},
-			{
-				Pos:    center.Add(geom.Vec3{X: -1, Y: -1, Z: 1}).Scale(length / 2),
-				TexPos: geom.Vec2{X: 0, Y: 0},
-			},
+		Vertices: []geom.Vec3{
+			center.Add(geom.Vec3{X: -1, Y: 1, Z: -1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: 1, Y: 1, Z: -1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: 1, Y: -1, Z: -1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: -1, Y: -1, Z: -1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: -1, Y: 1, Z: 1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: 1, Y: 1, Z: 1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: 1, Y: -1, Z: 1}).Scale(length / 2),
+			center.Add(geom.Vec3{X: -1, Y: -1, Z: 1}).Scale(length / 2),
 		},
+		/*  Orientation of vertices
+		 *         4--------5
+		 *        /|       /|
+		 *       / |      / |
+		 *      0--------1  |
+		 *      |  7-----|--6
+		 *      | /      | /
+		 *      |/       |/
+		 *      3--------2
+		 */
 		Indices: []int{
 			// Front
 			3, 0, 1,
@@ -217,13 +198,30 @@ var bottomTriangle = []geom.Vec2{
 }
 
 // Process returns the given vertices.
-func (s *CubeShader) Process(vertices []canvas.TexVertex, index int) []canvas.TexVertex {
+func (s *CubeShader) Process(vertices []geom.Vec3, index int) []canvas.TexVertex {
+	processed := make([]canvas.TexVertex, 0, len(vertices))
 	for i := 0; i < len(vertices); i++ {
+		var texPos geom.Vec2
 		if index%2 == 0 {
-			vertices[i].TexPos = topTriangle[i]
+			texPos = topTriangle[i]
 		} else {
-			vertices[i].TexPos = bottomTriangle[i]
+			texPos = bottomTriangle[i]
 		}
+		processed = append(processed, canvas.TexVertex{
+			Pos:    vertices[i],
+			TexPos: texPos,
+		})
 	}
-	return vertices
+	return processed
+}
+
+// VertexRotator rotates vertices.
+type VertexRotator struct {
+	rotation       geom.Mat3
+	rotationCenter geom.Vec3
+}
+
+// Process rotates the vertex.
+func (s *VertexRotator) Process(v geom.Vec3) geom.Vec3 {
+	return s.rotation.VecMul(v.Sub(s.rotationCenter)).Add(s.rotationCenter)
 }
