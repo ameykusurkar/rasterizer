@@ -3,6 +3,7 @@ package canvas
 import (
 	"image"
 	"image/color"
+	"math"
 
 	geom "rasterizer/geometry"
 )
@@ -44,9 +45,10 @@ type ImageTextureWrapped struct {
 
 func (tex *ImageTextureWrapped) shade(v TexVertex) color.Color {
 	max := tex.Img.Bounds().Max
-	scaledX := int(v.TexPos.X * float32(max.X) / tex.Scale)
-	scaledY := int(v.TexPos.Y * float32(max.Y) / tex.Scale)
-	return tex.Img.At(scaledX%max.X, scaledY%max.Y)
+	// TODO: Fix the Mod issue. Should be mod by max.X instead of max.X-1
+	scaledX := math.Mod(float64(v.TexPos.X*float32(max.X)/tex.Scale), float64(max.X-1))
+	scaledY := math.Mod(float64(v.TexPos.Y*float32(max.Y)/tex.Scale), float64(max.Y-1))
+	return tex.Img.At(int(scaledX), int(scaledY))
 }
 
 // TexVertex contains a vertex's position both on a two-dimensional surface (eg. a Canvas),
@@ -54,7 +56,8 @@ func (tex *ImageTextureWrapped) shade(v TexVertex) color.Color {
 // as we usually need to manipulate both the surface and texture map positions together.
 type TexVertex struct {
 	// Position of the vertex on a two-dimensional surface.
-	Pos geom.Vec2
+	// We use a Vec3 to preserve depth information.
+	Pos geom.Vec3
 	// Position of the vertex on the texture map, where 0 <= X, Y < 1.
 	TexPos geom.Vec2
 }

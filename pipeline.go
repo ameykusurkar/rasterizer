@@ -19,26 +19,15 @@ var texPoints = []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}}
 func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Texture) {
 	vertices := p.transformVertices(triangleList.Vertices)
 
-	// TODO: Find a cleaner way of passing around the texture vertices
-	triangles3D, triangles3DIndices := assembleTriangles(vertices, triangleList.Indices)
+	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
-	white := color.RGBA{255, 255, 255, 255}
-	for i, tri3D := range triangles3D {
-		tri2D := [3]geom.Vec2{
+	for _, tri3D := range triangles3D {
+		p.canv.FillTriangle(
 			p.transformPerspective(tri3D[0]),
 			p.transformPerspective(tri3D[1]),
 			p.transformPerspective(tri3D[2]),
-		}
-
-		p.canv.FillTriangle(
-			canvas.TexVertex{Pos: tri2D[0], TexPos: triangleList.TextureVertices[triangles3DIndices[i][0]]},
-			canvas.TexVertex{Pos: tri2D[1], TexPos: triangleList.TextureVertices[triangles3DIndices[i][1]]},
-			canvas.TexVertex{Pos: tri2D[2], TexPos: triangleList.TextureVertices[triangles3DIndices[i][2]]},
 			tex,
 		)
-		p.canv.DrawLine(tri2D[0], tri2D[1], white)
-		p.canv.DrawLine(tri2D[1], tri2D[2], white)
-		p.canv.DrawLine(tri2D[2], tri2D[0], white)
 	}
 }
 
@@ -51,51 +40,70 @@ func colorToVec3(clr color.RGBA) geom.Vec3 {
 }
 
 // Apply any rotation or translation to the vertices if necessary.
-func (p *Pipeline) transformVertices(vertices []geom.Vec3) []geom.Vec3 {
-	rotatedVertices := make([]geom.Vec3, 0, len(vertices))
+func (p *Pipeline) transformVertices(vertices []canvas.TexVertex) []canvas.TexVertex {
+	rotatedVertices := make([]canvas.TexVertex, 0, len(vertices))
 	for _, v := range vertices {
-		rotated := p.rotation.VecMul(v.Sub(p.rotationCenter)).Add(p.rotationCenter)
-		rotatedVertices = append(rotatedVertices, rotated)
+		rotated := p.rotation.VecMul(v.Pos.Sub(p.rotationCenter)).Add(p.rotationCenter)
+		rotatedVertices = append(rotatedVertices, canvas.TexVertex{
+			Pos: rotated, TexPos: v.TexPos,
+		})
 	}
 	return rotatedVertices
 }
 
 // Build triangles from the indexed list. Also applies backface culling.
-func assembleTriangles(vertices []geom.Vec3, indices []int) ([][3]geom.Vec3, [][3]int) {
-	triangles := make([][3]geom.Vec3, 0)
-	triangleIndices := make([][3]int, 0)
+func assembleTriangles(vertices []canvas.TexVertex, indices []int) [][3]canvas.TexVertex {
+	triangles := make([][3]canvas.TexVertex, 0)
 
 	for i := 0; i < len(indices); i += 3 {
 		idx0, idx1, idx2 := indices[i], indices[i+1], indices[i+2]
-
 		v0, v1, v2 := vertices[idx0], vertices[idx1], vertices[idx2]
-		// Assumes that the triangle's vertices are defined in clockwise order
-		normal := v1.Sub(v0).Cross(v2.Sub(v0))
-		if normal.Dot(v0) > 0 {
-			// A positive dot-product indicates that the viewing vector is in the same
-			// direcion as the triangle's normal. This means that we are looking at the
-			// back-face of triangle, which should not be visible.
+
+		if triangleFacingAway(v0.Pos, v1.Pos, v2.Pos) {
 			continue
 		}
 
-		triangles = append(triangles, [3]geom.Vec3{v0, v1, v2})
-		triangleIndices = append(triangleIndices, [3]int{idx0, idx1, idx2})
+		triangles = append(triangles, [3]canvas.TexVertex{v0, v1, v2})
 	}
 
-	return triangles, triangleIndices
+	return triangles
+}
+
+func triangleFacingAway(v0, v1, v2 geom.Vec3) bool {
+	// Assumes that the triangle's vertices are defined in clockwise order
+	normal := v1.Sub(v0).Cross(v2.Sub(v0))
+
+	// A positive dot-product indicates that the viewing vector is in the same
+	// direcion as the triangle's normal. This means that we are looking at the
+	// back-face of triangle, which should not be visible.
+	return normal.Dot(v0) > 0
 }
 
 // Transforms the 3D scene to a 2D scene by applying perspective, that can then
 // be drawn on a canvas.
-func (p *Pipeline) transformPerspective(vertex geom.Vec3) geom.Vec2 {
+func (p *Pipeline) transformPerspective(vertex canvas.TexVertex) canvas.TexVertex {
 	w, h := p.canv.Dimensions()
-	projected := geom.Project(vertex, 1)
-	return vertexToPoint(projected, w, h)
+	zInv := 1 / vertex.Pos.Z
+
+	// We also want to transform the texture coordinates so that perspective is
+	// applied correctly to the texture. We will re-multiply the texture coordinates
+	// by the Z component before drawing the pixel.
+	projected := vertex.Scale(zInv)
+
+	// Since the canvas is 2D, we use the Z component to store depth information.
+	// We store 1/Z so that interpolation preserves depth perspective correctly.
+	projected.Pos.Z = zInv
+	return canvas.TexVertex{
+		Pos:    vertexToPoint(projected.Pos, w, h),
+		TexPos: projected.TexPos,
+	}
 }
 
-func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec2 {
+func vertexToPoint(v geom.Vec3, width int, height int) geom.Vec3 {
 	halfWidth, halfHeight := float32(width)/2, float32(height)/2
-	x := (1 + v.X) * halfWidth
-	y := (1 - v.Y) * halfHeight
-	return geom.Vec2{X: float32(int(x)), Y: float32(int(y))}
+	return geom.Vec3{
+		X: (1 + v.X) * halfWidth,
+		Y: (1 - v.Y) * halfHeight,
+		Z: v.Z,
+	}
 }
