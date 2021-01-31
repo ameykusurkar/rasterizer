@@ -30,12 +30,13 @@ var colors = []color.RGBA{
 }
 
 type game struct {
-	pipeline Pipeline
-	cubes    []canvas.IndexedTriangleList
-	tex      canvas.ImageTextureWrapped
-	thetaX   float32
-	thetaY   float32
-	thetaZ   float32
+	pipeline     Pipeline
+	cubes        []canvas.IndexedTriangleList
+	tex          canvas.ImageTextureWrapped
+	vertexShader *DefaultVertexShader
+	thetaX       float32
+	thetaY       float32
+	thetaZ       float32
 }
 
 func main() {
@@ -53,15 +54,19 @@ func main() {
 	cubes = append(cubes, *buildCube(geom.Vec3{X: -0.5, Y: 1, Z: 4}, 2.0))
 	cubes = append(cubes, *buildCube(geom.Vec3{X: 0.5, Y: 0, Z: 5}, 3.5))
 
+	vertexShader := &DefaultVertexShader{
+		rotation:       *geom.RotationZ(0),
+		rotationCenter: cubes[0].Vertices[0].Pos.Add(cubes[0].Vertices[6].Pos).Scale(0.5),
+	}
+
 	g := game{
 		pipeline: Pipeline{
-			canv:     *canvas.NewCanvas(screenWidth, screenHeight),
-			rotation: *geom.RotationZ(0),
-			// TODO: Per-cube rotation centers
-			rotationCenter: cubes[0].Vertices[0].Pos.Add(cubes[0].Vertices[6].Pos).Scale(0.5),
+			canv:         *canvas.NewCanvas(screenWidth, screenHeight),
+			vertexShader: vertexShader,
 		},
-		tex:   canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
-		cubes: cubes,
+		vertexShader: vertexShader,
+		tex:          canvas.ImageTextureWrapped{Img: img, Scale: 0.25},
+		cubes:        cubes,
 	}
 
 	if err := ebiten.RunGame(&g); err != nil {
@@ -174,7 +179,7 @@ func (g *game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
 		g.thetaY -= 0.05
 	}
-	g.pipeline.rotation = *geom.RotationX(g.thetaX).
+	g.vertexShader.rotation = *geom.RotationX(g.thetaX).
 		MatMul(geom.RotationY(g.thetaY)).
 		MatMul(geom.RotationZ(g.thetaZ))
 	return nil

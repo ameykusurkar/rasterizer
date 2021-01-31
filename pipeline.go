@@ -6,18 +6,37 @@ import (
 	geom "rasterizer/geometry"
 )
 
-// Pipeline encapsulates the process of rendering a 3D scene to the screen.
-type Pipeline struct {
-	canv           canvas.Canvas
+// VertexShader is a Shader in the pipeline that processes vertices.
+type VertexShader interface {
+	Process(v canvas.TexVertex) canvas.TexVertex
+}
+
+// DefaultVertexShader rotates vertices.
+type DefaultVertexShader struct {
 	rotation       geom.Mat3
 	rotationCenter geom.Vec3
 }
 
-var texPoints = []geom.Vec2{{X: 0, Y: 1}, {X: 1, Y: 0}, {X: 1, Y: 1}}
+// Process rotates the vertex.
+func (s *DefaultVertexShader) Process(v canvas.TexVertex) canvas.TexVertex {
+	rotated := s.rotation.VecMul(v.Pos.Sub(s.rotationCenter)).Add(s.rotationCenter)
+	return canvas.TexVertex{
+		Pos: rotated, TexPos: v.TexPos,
+	}
+}
+
+// Pipeline encapsulates the process of rendering a 3D scene to the screen.
+type Pipeline struct {
+	canv         canvas.Canvas
+	vertexShader VertexShader
+}
 
 // Draw renders the given triangles onto the screen.
 func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Texture) {
-	vertices := p.transformVertices(triangleList.Vertices)
+	vertices := make([]canvas.TexVertex, 0, len(triangleList.Vertices))
+	for _, vertex := range triangleList.Vertices {
+		vertices = append(vertices, p.vertexShader.Process(vertex))
+	}
 
 	triangles3D := assembleTriangles(vertices, triangleList.Indices)
 
@@ -37,18 +56,6 @@ func colorToVec3(clr color.RGBA) geom.Vec3 {
 		Y: float32(clr.G),
 		Z: float32(clr.B),
 	}
-}
-
-// Apply any rotation or translation to the vertices if necessary.
-func (p *Pipeline) transformVertices(vertices []canvas.TexVertex) []canvas.TexVertex {
-	rotatedVertices := make([]canvas.TexVertex, 0, len(vertices))
-	for _, v := range vertices {
-		rotated := p.rotation.VecMul(v.Pos.Sub(p.rotationCenter)).Add(p.rotationCenter)
-		rotatedVertices = append(rotatedVertices, canvas.TexVertex{
-			Pos: rotated, TexPos: v.TexPos,
-		})
-	}
-	return rotatedVertices
 }
 
 // Build triangles from the indexed list. Also applies backface culling.
