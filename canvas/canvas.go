@@ -10,7 +10,7 @@ import (
 
 // IndexedTriangleList represents shapes using triangles.
 type IndexedTriangleList struct {
-	Vertices []TexVertex
+	Vertices []geom.Vec3
 	Indices  []int
 }
 

@@ -6,45 +6,42 @@ import (
 	geom "rasterizer/geometry"
 )
 
-// VertexShader is a Shader in the pipeline that processes vertices.
+// VertexShader is a shader in the pipeline that processes individual vertices.
 type VertexShader interface {
-	Process(v canvas.TexVertex) canvas.TexVertex
+	Process(v geom.Vec3) geom.Vec3
 }
 
-// DefaultVertexShader rotates vertices.
-type DefaultVertexShader struct {
-	rotation       geom.Mat3
-	rotationCenter geom.Vec3
-}
-
-// Process rotates the vertex.
-func (s *DefaultVertexShader) Process(v canvas.TexVertex) canvas.TexVertex {
-	rotated := s.rotation.VecMul(v.Pos.Sub(s.rotationCenter)).Add(s.rotationCenter)
-	return canvas.TexVertex{
-		Pos: rotated, TexPos: v.TexPos,
-	}
+// GeometryShader is a shader in the pipeline that processes assembled triangles.
+type GeometryShader interface {
+	Process(vertices []geom.Vec3, index int) []canvas.TexVertex
 }
 
 // Pipeline encapsulates the process of rendering a 3D scene to the screen.
 type Pipeline struct {
-	canv         canvas.Canvas
-	vertexShader VertexShader
+	canv           canvas.Canvas
+	vertexShader   VertexShader
+	geometryShader GeometryShader
 }
 
 // Draw renders the given triangles onto the screen.
 func (p *Pipeline) Draw(triangleList *canvas.IndexedTriangleList, tex canvas.Texture) {
-	vertices := make([]canvas.TexVertex, 0, len(triangleList.Vertices))
+	vertices := make([]geom.Vec3, 0, len(triangleList.Vertices))
 	for _, vertex := range triangleList.Vertices {
 		vertices = append(vertices, p.vertexShader.Process(vertex))
 	}
 
-	triangles3D := assembleTriangles(vertices, triangleList.Indices)
+	triangles, triangleIndices := assembleTriangles(vertices, triangleList.Indices)
 
-	for _, tri3D := range triangles3D {
+	processedTriangles := make([][]canvas.TexVertex, 0, len(triangles))
+	for i := 0; i < len(triangles); i++ {
+		processedTriangles = append(processedTriangles, p.geometryShader.Process(triangles[i][:], triangleIndices[i]))
+	}
+
+	for _, tri := range processedTriangles {
 		p.canv.FillTriangle(
-			p.transformPerspective(tri3D[0]),
-			p.transformPerspective(tri3D[1]),
-			p.transformPerspective(tri3D[2]),
+			p.transformPerspective(tri[0]),
+			p.transformPerspective(tri[1]),
+			p.transformPerspective(tri[2]),
 			tex,
 		)
 	}
@@ -59,21 +56,23 @@ func colorToVec3(clr color.RGBA) geom.Vec3 {
 }
 
 // Build triangles from the indexed list. Also applies backface culling.
-func assembleTriangles(vertices []canvas.TexVertex, indices []int) [][3]canvas.TexVertex {
-	triangles := make([][3]canvas.TexVertex, 0)
+func assembleTriangles(vertices []geom.Vec3, indices []int) ([][3]geom.Vec3, []int) {
+	triangles := make([][3]geom.Vec3, 0)
+	triangleIndices := make([]int, 0)
 
 	for i := 0; i < len(indices); i += 3 {
 		idx0, idx1, idx2 := indices[i], indices[i+1], indices[i+2]
 		v0, v1, v2 := vertices[idx0], vertices[idx1], vertices[idx2]
 
-		if triangleFacingAway(v0.Pos, v1.Pos, v2.Pos) {
+		if triangleFacingAway(v0, v1, v2) {
 			continue
 		}
 
-		triangles = append(triangles, [3]canvas.TexVertex{v0, v1, v2})
+		triangles = append(triangles, [3]geom.Vec3{v0, v1, v2})
+		triangleIndices = append(triangleIndices, i/3)
 	}
 
-	return triangles
+	return triangles, triangleIndices
 }
 
 func triangleFacingAway(v0, v1, v2 geom.Vec3) bool {
